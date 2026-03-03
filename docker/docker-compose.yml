@@ -1,0 +1,40 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sql-interview-demo
+    environment:
+      SA_PASSWORD: "${SA_PASSWORD:-InterviewDemo@2024}"
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+    ports:
+      # host port 1433 is often used by a local SQL Server instance and can
+      # conflict with the container.  map to an unused port on the host,
+      # for example 14330, and keep the container port at 1433.
+      - "14330:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+      - ./init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa",
+             "-P", "${SA_PASSWORD:-InterviewDemo@2024}", "-Q", "SELECT 1",
+             "-C", "-b"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # Optional: SQL Server management tools via Adminer-style web UI
+  # Uncomment if you want a browser-based query tool
+  # adminer:
+  #   image: dbeaver/cloudbeaver:latest
+  #   container_name: dbeaver-demo
+  #   ports:
+  #     - "8978:8978"
+  #   depends_on:
+  #     sqlserver:
+  #       condition: service_healthy
+
+volumes:
+  sqlserver_data:
+    name: sql-interview-demo-data

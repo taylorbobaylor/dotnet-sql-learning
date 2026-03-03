@@ -1,0 +1,94 @@
+# .NET & SQL Interview Prep
+
+A hands-on study lab for C# .NET + SQL Server interview prep. Includes a real Docker SQL Server, 6 intentionally broken stored procedures, and a C# console app to benchmark them.
+
+---
+
+## Quick Start
+
+### 1. Spin up SQL Server
+
+```bash
+cd docker
+cp .env.example .env       # optional: change SA password
+docker compose up -d
+bash init-db.sh            # creates DB, all tables, seed data, and stored procs
+```
+
+### 2. Connect in SSMS or Azure Data Studio
+
+```
+Server:   localhost,1433
+Login:    sa
+Password: InterviewDemo@2024
+Database: InterviewDemoDB
+```
+
+### 3. Run the C# benchmark app
+
+```bash
+cd src/SqlDemos
+dotnet run              # interactive scenario menu
+dotnet run -- all       # benchmark all 6 bad vs fixed proc pairs
+dotnet run -- 2         # scenario 2 only (parameter sniffing)
+```
+
+### 4. Browse the docs site
+
+```bash
+pip install mkdocs-material
+mkdocs serve
+```
+
+Open [http://localhost:8000](http://localhost:8000)
+
+---
+
+## The 6 Hands-On Scenarios
+
+| # | Name | Antipattern | Fix |
+|---|---|---|---|
+| 1 | Cursor Catastrophe | Cursor loop UPDATE | Set-based UPDATE |
+| 2 | Parameter Sniffing Ghost | Plan cached for wrong params | `OPTION(RECOMPILE)` / `OPTIMIZE FOR UNKNOWN` |
+| 3 | Non-SARGable Date Trap | `YEAR(OrderDate)` in WHERE | Range predicate |
+| 4 | SELECT * Flood | Pulling NVARCHAR(MAX) | Explicit column list |
+| 5 | Key Lookup Tax | Narrow nonclustered index | Covering index with INCLUDE |
+| 6 | Scalar UDF Killer | Scalar function in WHERE | Direct JOIN |
+
+---
+
+## Topics Covered (Docs Site)
+
+- **Hands-On Lab:** 6 scenarios with Docker SQL Server + C# benchmarks
+- **SQL Server:** Joins, Stored Procedures, Indexes, Query Optimization, Execution Plans, Parameter Sniffing
+- **C#:** Async/Await, SOLID Principles, Dependency Injection, Generics & LINQ
+- **.NET Data Access:** Entity Framework Core, Dapper, Calling Stored Procedures
+- **Interview Prep:** Game plan, Quick Reference Card, Top Q&A
+
+---
+
+## Project Structure
+
+```
+dotnet-sql-learning/
+├── docker/
+│   ├── docker-compose.yml       SQL Server 2022 container
+│   ├── .env.example             SA password config
+│   ├── init-db.sh               One-shot init script runner
+│   └── init/
+│       ├── 01-create-database.sql
+│       ├── 02-create-tables.sql
+│       ├── 03-seed-data.sql     ~55k orders, intentionally skewed
+│       ├── 04-indexes-baseline.sql
+│       ├── 05-bad-stored-procs.sql   ← The villains
+│       └── 06-fixed-stored-procs.sql ← The heroes
+├── src/
+│   └── SqlDemos/                C# console app — benchmarks bad vs fixed
+├── docs/
+│   ├── hands-on/                Scenario walkthroughs
+│   ├── sql/                     SQL Server reference
+│   ├── csharp/                  C# language topics
+│   ├── dotnet/                  EF Core, Dapper, stored procs
+│   └── interview-prep/          Game plan, Q&A, cheat sheet
+└── mkdocs.yml
+```

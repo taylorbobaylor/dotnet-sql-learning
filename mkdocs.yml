@@ -1,0 +1,80 @@
+site_name: .NET & SQL Interview Prep
+site_description: Comprehensive study guide + hands-on lab for C#, .NET, and SQL Server interview preparation
+site_author: Taylor
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.tabs.link
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - attr_list
+  - md_in_html
+
+nav:
+  - Home: index.md
+
+  - "\U0001F9EA Hands-On Lab":
+      - Setup & Overview: hands-on/index.md
+      - "Scenario 1: Cursor Catastrophe": hands-on/scenario-01-cursor.md
+      - "Scenario 2: Parameter Sniffing Ghost": hands-on/scenario-02-parameter-sniffing.md
+      - "Scenario 3: Non-SARGable Date Trap": hands-on/scenario-03-sargable.md
+      - "Scenario 4: SELECT * Flood": hands-on/scenario-04-select-star.md
+      - "Scenario 5: Key Lookup Tax": hands-on/scenario-05-key-lookup.md
+      - "Scenario 6: Scalar UDF Killer": hands-on/scenario-06-scalar-udf.md
+
+  - SQL Server:
+      - Overview: sql/index.md
+      - Joins: sql/joins.md
+      - Stored Procedures: sql/stored-procedures.md
+      - Indexes: sql/indexes.md
+      - Query Optimization: sql/optimization.md
+      - Execution Plans: sql/execution-plans.md
+      - Parameter Sniffing: sql/parameter-sniffing.md
+  - C# Language:
+      - Overview: csharp/index.md
+      - Async / Await: csharp/async-await.md
+      - SOLID Principles: csharp/solid-principles.md
+      - Dependency Injection: csharp/dependency-injection.md
+      - Generics & LINQ: csharp/generics-linq.md
+  - .NET & Data Access:
+      - Overview: dotnet/index.md
+      - Entity Framework Core: dotnet/entity-framework.md
+      - Dapper: dotnet/dapper.md
+      - Calling Stored Procedures: dotnet/calling-stored-procedures.md
+  - Interview Prep:
+      - Game Plan: interview-prep/index.md
+      - Quick Reference Card: interview-prep/quick-reference.md
+      - Top Q&A: interview-prep/common-questions.md
