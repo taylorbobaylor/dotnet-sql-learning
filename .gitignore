@@ -1,0 +1,24 @@
+# .NET build output
+bin/
+obj/
+
+# User-specific Visual Studio / Rider files
+*.user
+*.suo
+.vs/
+.idea/
+
+# NuGet
+*.nupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Environment / secrets
+.env
+
+# macOS
+.DS_Store
+
+# Docker volume data
+docker/data/
