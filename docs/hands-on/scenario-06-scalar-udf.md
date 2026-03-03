@@ -64,14 +64,21 @@ The UDF is called **twice** per row — once in WHERE (to filter) and once in SE
 
 ---
 
-## The SSMS Exercise
+## The Exercise
 
-**Step 1:** Enable statistics + actual plan (`Ctrl+M`):
+**Step 1:** Enable statistics and actual execution plan:
 
 ```sql
 SET STATISTICS IO ON;
 SET STATISTICS TIME ON;
 ```
+
+Enable the actual plan **before** running:
+
+| Tool | How to enable actual execution plan |
+|---|---|
+| **VS Code MSSQL** | Right-click → **"Run Query with Actual Execution Plan"** |
+| **DataGrip** | Right-click → **Explain Plan → Explain Analyzed** |
 
 **Step 2:** Run the bad SP:
 
@@ -79,12 +86,11 @@ SET STATISTICS TIME ON;
 EXEC dbo.usp_Bad_GetGoldCustomerOrders @MinAmount = 500.00;
 ```
 
-In the **Execution Plan**, look for:
-- `Compute Scalar` node with the UDF reference — called per row
-- **No parallelism** in the plan (no yellow ↔ arrows indicating parallel execution)
-- High CPU time relative to elapsed time
+In the **Execution Plan tab**, look for:
 
-In the Messages tab, check `CPU time` — it will be disproportionately high.
+- A `Compute Scalar` node — this is the UDF being called once per row. Hover/click it to confirm it references `fn_GetCustomerTier`.
+- **No parallelism operators** — in VS Code MSSQL the parallelism (Gather Streams) operator looks like two arrows (↔). If you don't see it anywhere in the plan, the query is fully serial. DataGrip similarly shows no parallel branches.
+- In the **Messages/Output tab**: check that `CPU time` is *disproportionately high* relative to `elapsed time`. Row-by-row UDF calls saturate a single core — CPU and elapsed will be close together and both large.
 
 **Step 3:** Run the fixed SP:
 
@@ -93,9 +99,9 @@ EXEC dbo.usp_Fixed_GetGoldCustomerOrders @MinAmount = 500.00;
 ```
 
 The fixed plan will show:
-- A JOIN to the Customers table (one-time, set-based)
-- Potential **parallelism** (if data volume justifies it)
-- Much lower CPU time and elapsed time
+- A direct **Hash Match** or **Nested Loops** JOIN to the Customers table — one set-based operation instead of N function calls
+- Potential **parallelism operators** (Parallelism / Gather Streams nodes) if the data volume justifies it
+- Much lower CPU time and elapsed time in Messages/Output
 
 ---
 

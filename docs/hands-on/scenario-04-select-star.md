@@ -40,15 +40,21 @@ END;
 
 ---
 
-## The SSMS Exercise
+## The Exercise
 
-**Step 1:** Enable statistics:
+**Step 1:** Enable statistics and actual execution plan:
 
 ```sql
 SET STATISTICS IO ON;
 SET STATISTICS TIME ON;
--- Also press Ctrl+M for the actual plan
 ```
+
+Enable the actual plan **before** running:
+
+| Tool | How to enable actual execution plan |
+|---|---|
+| **VS Code MSSQL** | Right-click → **"Run Query with Actual Execution Plan"** |
+| **DataGrip** | Right-click → **Explain Plan → Explain Analyzed** |
 
 **Step 2:** Run the bad version for BigCorp:
 
@@ -56,13 +62,13 @@ SET STATISTICS TIME ON;
 EXEC dbo.usp_Bad_GetCustomerOrderHistory @CustomerID = 1;
 ```
 
-In the Messages tab, watch for **lob logical reads** — this is SQL Server reading LOB (Large Object) pages for the NVARCHAR(MAX) column:
+In the **Messages/Output tab**, look specifically for the **`lob logical reads`** value — this is SQL Server reading the LOB (Large Object) pages for the `NVARCHAR(MAX)` Notes column:
 
 ```
 Table 'Orders'. Scan count 1, logical reads 1843, lob logical reads 4920
 ```
 
-Those `lob logical reads` are the Notes pages. Each LOB page = 8KB. 4,920 pages = ~39MB of data read just for the Notes column.
+Each LOB page = 8 KB. 4,920 LOB reads ≈ **39 MB** read just for the Notes column that the UI never displays.
 
 **Step 3:** Run the fixed version:
 
@@ -74,7 +80,9 @@ EXEC dbo.usp_Fixed_GetCustomerOrderHistory @CustomerID = 1;
 Table 'Orders'. Scan count 1, logical reads 1843, lob logical reads 0
 ```
 
-LOB reads drop to **zero** because the Notes column is never accessed.
+LOB reads drop to **zero** — the Notes column pages are never touched because the query doesn't ask for that column.
+
+> **In the execution plan:** Both plans will show the same shape (Index Seek on the clustered index). The difference isn't visible in the graphical plan — it's entirely in the I/O numbers. This is why `STATISTICS IO` is so important for this scenario.
 
 ---
 

@@ -20,7 +20,7 @@ SET STATISTICS IO OFF;
 SET STATISTICS TIME OFF;
 ```
 
-Look at the **Messages tab** in SSMS. You'll see:
+Look at the **Messages** tab (VS Code MSSQL) or **Output** panel (DataGrip). You'll see:
 - **Logical reads** — pages read from the buffer cache (most important metric)
 - **Physical reads** — pages read from disk (bad — means data wasn't cached)
 - **CPU time** and **elapsed time**
@@ -29,19 +29,24 @@ High logical reads on a large table = index problem or full table scan.
 
 ### Step 2: Get the execution plan
 
-Press `Ctrl+M` in SSMS before running the query to capture the **actual execution plan**.
+Enable the **actual execution plan** before running the query:
+
+| Tool | How |
+|---|---|
+| **VS Code MSSQL** | Right-click editor → **Run Query with Actual Execution Plan** |
+| **DataGrip** | Right-click → **Explain Plan → Explain Analyzed** |
 
 Look for:
 - **Table Scan / Index Scan** on large tables (red flag — look for a Seek instead)
 - **Key Lookup** — nonclustered index found the row but needed to go back for more columns (covering index opportunity)
 - **Sort** with a large estimated subtree cost
 - **Fat arrows** — thick lines between operators mean large row counts (often unexpected)
-- **Yellow warning triangles** — estimate vs actual row count mismatch (statistics problem)
+- **Warning icons on nodes** — hover to see estimated vs actual row count mismatch (statistics problem)
 - **Parallelism** issues — query using too many or too few threads
 
 ### Step 3: Check for missing indexes
 
-SSMS will show green "Missing Index" hints in the execution plan. Use them as guidance (not gospel).
+Both VS Code MSSQL and DataGrip surface **Missing Index** hints in the execution plan (same XML hint as SSMS). Use them as guidance (not gospel).
 
 Also check the DMV query on the [Indexes page](indexes.md#finding-missing-indexes).
 

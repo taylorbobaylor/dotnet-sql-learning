@@ -57,16 +57,23 @@ END;
 
 ---
 
-## The SSMS Exercise
+## The Exercise
 
-**Step 1:** Enable statistics and actual plan:
+**Step 1:** Enable statistics and actual execution plan.
+
+Paste this at the top of your query window in whichever tool you're using:
 
 ```sql
 SET STATISTICS IO ON;
 SET STATISTICS TIME ON;
 ```
 
-Press `Ctrl+M` to enable actual execution plan.
+Then enable the **actual execution plan** before running:
+
+| Tool | How to enable actual execution plan |
+|---|---|
+| **VS Code MSSQL** | Right-click in editor → **"Run Query with Actual Execution Plan"** |
+| **DataGrip** | Right-click → **Explain Plan → Explain Analyzed** |
 
 **Step 2:** Run the bad version:
 
@@ -74,7 +81,7 @@ Press `Ctrl+M` to enable actual execution plan.
 EXEC dbo.usp_Bad_RecalcOrderTotals @Status = 'Pending';
 ```
 
-**Step 3:** Record what you see in the Messages tab. You'll see hundreds of individual update round-trips.
+**Step 3:** Open the **Messages** tab (VS Code MSSQL) or **Output** panel (DataGrip). You'll see the `STATISTICS IO` output repeated hundreds of times — one entry per order — because the cursor fires individual I/O for each row.
 
 **Step 4:** Run the fixed version:
 
@@ -82,7 +89,7 @@ EXEC dbo.usp_Bad_RecalcOrderTotals @Status = 'Pending';
 EXEC dbo.usp_Fixed_RecalcOrderTotals @Status = 'Pending';
 ```
 
-**Step 5:** Compare.
+**Step 5:** Compare the Messages/Output. The fixed version shows a single pair of `STATISTICS IO` lines — one pass over each table.
 
 ---
 

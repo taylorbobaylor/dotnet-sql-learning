@@ -39,14 +39,13 @@ END;
 
 ---
 
-## The SSMS Exercise
+## The Exercise
 
 This requires running in a specific order to reproduce the sniffing. **Do exactly this:**
 
-**Step 1:** Clear the plan cache for this procedure (simulates a restart):
+**Step 1:** Clear the plan cache for this procedure (simulates a SQL Server restart):
 
 ```sql
--- Find and clear the plan cache for our SP
 DECLARE @handle VARBINARY(64);
 SELECT @handle = plan_handle
 FROM sys.dm_exec_procedure_stats
@@ -56,17 +55,25 @@ IF @handle IS NOT NULL
     DBCC FREEPROCCACHE(@handle);
 ```
 
-**Step 2:** Enable statistics + actual plan, then run with a **small customer first**:
+**Step 2:** Enable statistics and actual execution plan, then run with a **small customer first**:
 
 ```sql
 SET STATISTICS IO ON;
 SET STATISTICS TIME ON;
--- Press Ctrl+M for actual plan
+```
 
+Enable the actual plan **before** running:
+
+| Tool | How to enable actual execution plan |
+|---|---|
+| **VS Code MSSQL** | Right-click → **"Run Query with Actual Execution Plan"** |
+| **DataGrip** | Right-click → **Explain Plan → Explain Analyzed** |
+
+```sql
 EXEC dbo.usp_Bad_GetOrdersByCustomer @CustomerID = 83;  -- small customer, poisons cache
 ```
 
-Check the execution plan. Note: **Nested Loops** join. Logical reads: small.
+Open the Execution Plan tab. Note the join type: **Nested Loops**. Check Messages/Output for logical reads (small number).
 
 **Step 3:** Now run for BigCorp **without clearing the cache**:
 
@@ -74,12 +81,19 @@ Check the execution plan. Note: **Nested Loops** join. Logical reads: small.
 EXEC dbo.usp_Bad_GetOrdersByCustomer @CustomerID = 1;  -- BigCorp
 ```
 
-Check the plan — still **Nested Loops**, despite 50,000 rows. Watch logical reads explode. Check for row count estimate vs actual mismatch (estimated: ~12 rows, actual: 50,000).
+The plan tab will still show **Nested Loops** — the cached plan from the small customer is being reused for 50,000 rows. Watch logical reads spike dramatically. In the plan, hover the join operator to see the row count tooltip:
+
+```
+Estimated Rows:  12
+Actual Rows:     50,847
+```
+
+That mismatch is the smoking gun.
 
 **Step 4:** Run the fixed SP for comparison:
 
 ```sql
-EXEC dbo.usp_Fixed_GetOrdersByCustomer @CustomerID = 1;         -- RECOMPILE
+EXEC dbo.usp_Fixed_GetOrdersByCustomer @CustomerID = 1;          -- RECOMPILE
 EXEC dbo.usp_Fixed_GetOrdersByCustomer_HighFreq @CustomerID = 1; -- OPTIMIZE FOR UNKNOWN
 ```
 

@@ -15,14 +15,25 @@ docker compose up -d
 bash init-db.sh            # creates DB, all tables, seed data, and stored procs
 ```
 
-### 2. Connect in SSMS or Azure Data Studio
+### 2. Connect with a SQL client
 
 ```
 Server:   localhost,1433
 Login:    sa
-Password: InterviewDemo@2024
+Password: InterviewDemo@2026
 Database: InterviewDemoDB
 ```
+
+**On macOS** — pick either of these (both support graphical execution plans):
+
+| Tool | Notes |
+|---|---|
+| **VS Code + MSSQL extension** | Install `ms-mssql.mssql` from the Extensions panel. Run queries, view graphical execution plans, and see `STATISTICS IO` output — all without leaving VS Code. Free. |
+| **JetBrains DataGrip** | Full-featured SQL IDE with the best visual execution plan + **Explain Analyzed** view (actual row counts). Paid, but has a free trial. |
+
+> **Note for Apple Silicon (M1/M2/M3/M4):** The `docker-compose.yml` already uses `mcr.microsoft.com/azure-sql-edge`, the ARM64-compatible image. No changes needed — it works natively on Apple Silicon.
+
+> **Note:** Azure Data Studio was retired on February 28, 2026. Use VS Code with the MSSQL extension instead.
 
 ### 3. Run the C# benchmark app
 

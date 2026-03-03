@@ -61,15 +61,21 @@ END;
 
 ---
 
-## The SSMS Exercise
+## The Exercise
 
-**Step 1:** Enable statistics + plan:
+**Step 1:** Enable statistics and actual execution plan:
 
 ```sql
 SET STATISTICS IO ON;
 SET STATISTICS TIME ON;
--- Press Ctrl+M for actual plan
 ```
+
+Enable the actual plan **before** running:
+
+| Tool | How to enable actual execution plan |
+|---|---|
+| **VS Code MSSQL** | Right-click → **"Run Query with Actual Execution Plan"** |
+| **DataGrip** | Right-click → **Explain Plan → Explain Analyzed** |
 
 **Step 2:** Run the bad version:
 
@@ -77,12 +83,12 @@ SET STATISTICS TIME ON;
 EXEC dbo.usp_Bad_GetOrdersByMonth @Year = 2024, @Month = 6;
 ```
 
-In the **Messages tab**, look at:
+In the **Messages/Output tab**, note the logical reads:
 ```
 Table 'Orders'. Scan count 1, logical reads [something large]
 ```
 
-In the **Execution Plan**, look for **Index Scan** on Orders — SQL Server is reading every row.
+In the **Execution Plan tab**, look for **Index Scan** on Orders — SQL Server is reading every single row and applying the `YEAR()`/`MONTH()` functions per-row.
 
 **Step 3:** Run the fixed version:
 
@@ -90,7 +96,7 @@ In the **Execution Plan**, look for **Index Scan** on Orders — SQL Server is r
 EXEC dbo.usp_Fixed_GetOrdersByMonth @Year = 2024, @Month = 6;
 ```
 
-The Messages tab now shows dramatically fewer logical reads. The execution plan shows **Index Seek** — jumping directly to the matching date range.
+The Messages/Output now shows dramatically fewer logical reads. The execution plan shows **Index Seek** — jumping directly to the matching date range. Hover the seek node to confirm the **Seek Predicate** shows a range (`OrderDate >= '2024-06-01' AND OrderDate < '2024-07-01'`) rather than a function call.
 
 ---
 

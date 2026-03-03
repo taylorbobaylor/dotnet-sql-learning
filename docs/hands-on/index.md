@@ -14,19 +14,24 @@ cp .env.example .env          # optional: customize the SA password
 docker compose up -d
 ```
 
-Wait ~20 seconds for SQL Server to initialize, then run the init scripts:
+Wait ~20 seconds for SQL Server to initialize, then run the init scripts.
+
+By default the helper will execute the first five files and leave the “fixed” stored
+procedures until after you've worked through the labs. Run with `--all` if you
+want everything applied in one shot.
 
 ```bash
 bash init-db.sh               # Linux/Mac
+# or `bash init-db.sh --all` to include the fixed procedures
 # Windows: run each docker/init/*.sql in SSMS in order
 ```
 
-**Step 2 — Verify it's working (SSMS or Azure Data Studio):**
+**Step 2 — Verify it's working (VS Code MSSQL extension or DataGrip):**
 
 ```
 Server:   localhost,1433
 Login:    sa
-Password: InterviewDemo@2024
+Password: InterviewDemo@2026
 ```
 
 **Step 3 — Run the C# demo app:**
@@ -68,21 +73,68 @@ dotnet run -- 2         # run scenario 2 only
 
 ---
 
-## How to Use SSMS to Measure
+## How to Measure on macOS
 
-Every scenario has an SSMS exercise block. Before running, enable:
+Every scenario has a query exercise block. The SQL commands themselves (`SET STATISTICS IO ON`, `EXEC ...`) are identical across both tools. What differs is *how you enable the execution plan*. Pick the one you have:
+
+> **Note:** Azure Data Studio was retired on February 28, 2026. Use one of the two tools below instead.
+
+---
+
+### Option A — VS Code with the MSSQL Extension
+
+1. Install **SQL Server (mssql)** by Microsoft (`ms-mssql.mssql`) from the Extensions panel if you haven't already.
+2. Open a `.sql` file, connect to `localhost,1433` when prompted (or use the status-bar connection picker at the bottom).
+3. Paste the statistics preamble at the top of your query:
+   ```sql
+   SET STATISTICS IO ON;
+   SET STATISTICS TIME ON;
+   ```
+4. To get the **actual execution plan**, right-click anywhere in the editor → **"Run Query with Actual Execution Plan"** (or click the dropdown arrow next to the Run button ▶ and select that option).
+5. The results pane shows three tabs:
+   - **Results** — the row data
+   - **Messages** — `STATISTICS IO` / `STATISTICS TIME` output (logical reads, CPU time, elapsed time)
+   - **Execution Plan** — graphical plan (click any operator node to see estimated vs actual rows, cost %, output column list)
+
+> **Tip:** The VS Code MSSQL extension uses the same `.sqlplan` XML format as SSMS, so all operators (Index Seek, Key Lookup, Hash Match, etc.) use identical names.
+
+---
+
+### Option B — JetBrains DataGrip
+
+1. Connect to `localhost,1433` with the SQL Server driver (Login: `sa`, Password: `InterviewDemo@2026`, Database: `InterviewDemoDB`).
+2. Open a query console for that data source.
+3. Paste the statistics preamble at the top:
+   ```sql
+   SET STATISTICS IO ON;
+   SET STATISTICS TIME ON;
+   ```
+4. To get the **actual execution plan**, right-click in the editor → **Explain Plan → Explain Analyzed**. This runs the query and captures live row counts — equivalent to SSMS's actual execution plan.
+   - For a quick *estimated* plan without running the query: right-click → **Explain Plan → Explain Plan** (or `Cmd+Shift+E`).
+5. Results appear in separate panels at the bottom:
+   - **Output** — the `STATISTICS IO` / `STATISTICS TIME` text (logical reads, CPU, elapsed)
+   - **Plan** — DataGrip's graphical plan tree. Click any node to expand its full properties (actual rows, estimated rows, cost, output columns).
+
+> **Tip:** DataGrip's **Explain Analyzed** view highlights the costliest nodes in **orange/red**. Start your investigation there.
+
+---
+
+### The SQL Commands (Same in All Tools)
 
 ```sql
--- In SSMS: paste at the top of your query window
+-- Paste at the top of every exercise query window:
 SET STATISTICS IO ON;
 SET STATISTICS TIME ON;
 ```
 
-Then press `Ctrl+M` to enable the **actual execution plan** before running.
+After running, look for this pattern in the Messages/Output tab:
 
-After running, check:
-- **Messages tab** → logical reads per table
-- **Execution Plan tab** → look for the red flags listed in each scenario
+```
+Table 'Orders'. Scan count 1, logical reads 3842, lob logical reads 0, ...
+SQL Server Execution Times: CPU time = 234 ms, elapsed time = 412 ms.
+```
+
+**Logical reads** is your primary metric. 1 logical read = 1 × 8 KB page read from the buffer cache. Dropping logical reads from thousands to dozens is the goal for most of these scenarios.
 
 !!! tip "Good habit"
     Always run the bad version first, write down the logical reads, then run the fixed version. The contrast is what makes it stick.

@@ -9,16 +9,27 @@ Reading execution plans is the most powerful skill for diagnosing slow queries. 
 An execution plan is SQL Server's "recipe" for how it will retrieve data. The query optimizer evaluates many possible plans and picks the one it estimates to be cheapest (in terms of I/O and CPU). The plan is then cached and reused.
 
 There are two types:
-- **Estimated execution plan** (`Ctrl+L`) — generated without running the query, uses statistics
-- **Actual execution plan** (`Ctrl+M`, then run) — captured during real execution, shows actual vs estimated row counts
+- **Estimated execution plan** — generated without running the query, uses statistics only
+- **Actual execution plan** — captured during real execution, shows actual vs estimated row counts
 
 Always use the **actual execution plan** when diagnosing a slow query — the difference between estimated and actual row counts often reveals the root cause.
+
+### Enabling Execution Plans on macOS
+
+> **Note:** Azure Data Studio was retired on February 28, 2026. Use VS Code MSSQL or DataGrip.
+
+| Tool | Estimated plan | Actual execution plan |
+|---|---|---|
+| **VS Code MSSQL** | Right-click editor → **Explain Current Statement** | Right-click → **Run Query with Actual Execution Plan** |
+| **DataGrip** | Right-click → **Explain Plan → Explain Plan** (or `Cmd+Shift+E`) | Right-click → **Explain Plan → Explain Analyzed** |
+
+After running, the graphical plan appears in the **Execution Plan** tab (VS Code) or **Plan** tab (DataGrip). Hover or click any operator node to see its full property sheet — estimated rows, actual rows, I/O cost, output column list.
 
 ---
 
 ## How to Read an Execution Plan
 
-Plans are read **right to left, top to bottom** in SSMS. Data flows left to the final output operator.
+Plans are read **right to left, top to bottom**. Data flows left to the final output operator.
 
 Each operator (node) shows:
 - **Cost %** — percentage of total query cost attributed to this operator
@@ -91,7 +102,7 @@ Fat arrows = many rows. If you see a fat arrow going into a filter/join early in
 
 ## Using `SET STATISTICS IO`
 
-This is your go-to tool in SSMS for measuring I/O impact.
+This is your primary tool for measuring I/O impact. It works identically in VS Code MSSQL and DataGrip — paste it at the top of any query window.
 
 ```sql
 SET STATISTICS IO ON;
@@ -103,7 +114,7 @@ SET STATISTICS IO OFF;
 SET STATISTICS TIME OFF;
 ```
 
-**Sample Messages output:**
+The output appears in the **Messages** tab (VS Code MSSQL) or the **Output** panel (DataGrip):
 
 ```
 Table 'Orders'. Scan count 1, logical reads 3842, physical reads 0,
@@ -114,11 +125,12 @@ SQL Server Execution Times:
 ```
 
 **What to look at:**
-- **Logical reads** — pages read from the buffer cache. 1 page = 8KB. High logical reads = lots of data being processed
-- **Physical reads** — pages read from disk (cache miss). High = data not in memory
-- **Scan count** > 1 on the same table in a loop = possible missing index or cursor issue
+- **Logical reads** — pages read from the buffer cache. 1 page = 8 KB. High logical reads = lots of data being processed.
+- **lob logical reads** — pages read for `NVARCHAR(MAX)` / `VARBINARY(MAX)` columns. Often surprisingly large when `SELECT *` is used.
+- **Physical reads** — pages read from disk (buffer cache miss). High = data not yet cached.
+- **Scan count** > 1 on the same table in a loop = possible missing index or cursor issue.
 
-**Benchmark improvements:** Before and after optimization, compare logical reads. A good optimization often drops logical reads by 10x or more.
+**Benchmark improvements:** Before and after optimization, compare logical reads. A good optimization often drops logical reads by 10× or more.
 
 ---
 
@@ -151,25 +163,32 @@ DBCC FREEPROCCACHE (plan_handle);
 
 ---
 
-## Workflow: Diagnosing a Slow Stored Procedure
+## Workflow: Diagnosing a Slow Stored Procedure (macOS)
 
 ```
-1. Enable actual execution plan (Ctrl+M) + SET STATISTICS IO ON
-2. Run the stored procedure
-3. Check Messages tab:
-   - High logical reads on which table?
-4. Check execution plan:
-   - Any Table Scans? → missing index
-   - Any Key Lookups? → add INCLUDE columns
-   - Estimated vs Actual row mismatch? → statistics/parameter sniffing
-   - Thick arrow before a filter? → predicate not pushed down, non-SARGable
-5. Address the highest-cost operator first
-6. Re-run and compare logical reads before/after
-7. Repeat until satisfactory
+1. Open your query client (VS Code MSSQL or DataGrip)
+2. Enable actual execution plan (see table above for your tool)
+3. Add to the top of your query window:
+      SET STATISTICS IO ON;
+      SET STATISTICS TIME ON;
+4. Run the stored procedure
+5. Check Messages tab (VS Code MSSQL) or Output panel (DataGrip):
+   - Which table has high logical reads?
+   - Any lob logical reads? → SELECT * pulling NVARCHAR(MAX)
+6. Check the Execution Plan tab / Plan tab:
+   - Any Table Scans on large tables? → missing index or non-SARGable predicate
+   - Any Key Lookups? → add INCLUDE columns to the index
+   - Estimated vs Actual row mismatch? → stale statistics or parameter sniffing
+   - Thick arrows before a filter? → predicate not pushed down
+   - Compute Scalar calling a UDF? → inline the logic as a JOIN
+   - No parallelism operators on a heavy query? → scalar UDF or MAXDOP hint
+7. Address the highest-cost operator first
+8. Re-run and compare logical reads before/after
+9. Repeat until satisfactory
 ```
 
 ---
 
 ## Interview Explanation Template
 
-> "When I get a slow stored procedure, first thing I do is run it in SSMS with `SET STATISTICS IO ON` and the actual execution plan enabled. I look at logical reads per table — that tells me where the I/O is happening. Then I look at the execution plan for table scans, key lookups, and any large discrepancies between estimated and actual row counts. Table scans usually mean a missing or unused index. Key lookups mean the index doesn't cover all the columns the query needs, so I'd add an INCLUDE clause. Row count mismatches usually point to stale statistics or parameter sniffing. I fix the highest-cost issue first, re-measure, and iterate."
+> "When I get a slow stored procedure, first thing I do is run it with `SET STATISTICS IO ON` and the actual execution plan enabled — I use VS Code with the MSSQL extension or DataGrip on macOS. I look at logical reads per table — that tells me where the I/O is happening. Then I look at the execution plan for table scans, key lookups, and any large discrepancies between estimated and actual row counts. Table scans usually mean a missing or unused index. Key lookups mean the index doesn't cover all the columns the query needs, so I'd add an INCLUDE clause. Row count mismatches usually point to stale statistics or parameter sniffing. I fix the highest-cost issue first, re-measure, and iterate."

@@ -8,7 +8,7 @@ This section covers the SQL Server topics most likely to come up in a developer 
 - **[Stored Procedures](stored-procedures.md)** — Writing, optimizing, and best practices
 - **[Indexes](indexes.md)** — Clustered, nonclustered, covering, and composite indexes
 - **[Query Optimization](optimization.md)** — Practical techniques to make queries faster
-- **[Execution Plans](execution-plans.md)** — Reading and acting on execution plans in SSMS
+- **[Execution Plans](execution-plans.md)** — Reading and acting on execution plans (VS Code MSSQL / DataGrip)
 - **[Parameter Sniffing](parameter-sniffing.md)** — What it is and how to fix it
 
 ## Key SQL Server Concepts to Know Cold
@@ -19,12 +19,26 @@ This section covers the SQL Server topics most likely to come up in a developer 
 
 **SQL Server editions commonly used in enterprise:** Standard, Enterprise, Developer (free, same features as Enterprise — great for local dev).
 
-## Useful SSMS Shortcuts
+## Useful Shortcuts on macOS
 
-| Action | Shortcut |
+> **Note:** Azure Data Studio was retired February 28, 2026. Use VS Code + MSSQL extension or DataGrip.
+
+### VS Code MSSQL Extension
+
+| Action | How |
 |---|---|
-| Execute query | `F5` |
-| Include actual execution plan | `Ctrl + M` |
-| Show estimated execution plan | `Ctrl + L` |
-| Comment/uncomment lines | `Ctrl + K, Ctrl + C` / `Ctrl + K, Ctrl + U` |
-| Format selected query | `Ctrl + Shift + F` (with add-ins) |
+| Execute query | `Cmd + Shift + E` or click ▶ in toolbar |
+| Run with actual execution plan | Right-click → **Run Query with Actual Execution Plan** |
+| Show estimated execution plan | Right-click → **Explain Current Statement** |
+| Comment/uncomment lines | `Cmd + /` |
+| Connect to server | Click the server name in the status bar at the bottom |
+
+### DataGrip
+
+| Action | How |
+|---|---|
+| Execute query / selection | `Cmd + Enter` |
+| Run with actual execution plan | Right-click → **Explain Plan → Explain Analyzed** |
+| Show estimated execution plan | Right-click → **Explain Plan → Explain Plan** or `Cmd + Shift + E` |
+| Comment/uncomment lines | `Cmd + /` |
+| Reformat SQL | `Cmd + Alt + L` |

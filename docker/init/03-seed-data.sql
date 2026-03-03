@@ -78,7 +78,7 @@ INSERT INTO dbo.Customers (FirstName, LastName, Email, City, Country, IsVIP, Tie
 
 -- Generate 999 regular customers using a numbers trick
 WITH nums AS (
-    SELECT TOP 999 ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n
+    SELECT TOP 999 ROW_NUMBER() OVER (ORDER BY a.object_id) AS n
     FROM sys.all_columns a CROSS JOIN sys.all_columns b
 )
 INSERT INTO dbo.Customers (FirstName, LastName, Email, City, Country, IsVIP, TierCode)
@@ -207,11 +207,18 @@ WHERE o.Status <> 'Pending'
   AND o.OrderID % 4 = 0;  -- audit every 4th changed order
 GO
 
-PRINT '✅ Seed data inserted.';
-PRINT '   Customers:     ' + CAST((SELECT COUNT(*) FROM dbo.Customers)  AS NVARCHAR);
-PRINT '   Products:      ' + CAST((SELECT COUNT(*) FROM dbo.Products)   AS NVARCHAR);
-PRINT '   Orders:        ' + CAST((SELECT COUNT(*) FROM dbo.Orders)     AS NVARCHAR);
-PRINT '   OrderItems:    ' + CAST((SELECT COUNT(*) FROM dbo.OrderItems) AS NVARCHAR);
-PRINT '   Employees:     ' + CAST((SELECT COUNT(*) FROM dbo.Employees)  AS NVARCHAR);
-PRINT '   BigCorp orders:' + CAST((SELECT COUNT(*) FROM dbo.Orders WHERE CustomerID = 1) AS NVARCHAR);
+DECLARE @cnt_customers  INT; SELECT @cnt_customers  = COUNT(*) FROM dbo.Customers;
+DECLARE @cnt_products   INT; SELECT @cnt_products   = COUNT(*) FROM dbo.Products;
+DECLARE @cnt_orders     INT; SELECT @cnt_orders     = COUNT(*) FROM dbo.Orders;
+DECLARE @cnt_items      INT; SELECT @cnt_items      = COUNT(*) FROM dbo.OrderItems;
+DECLARE @cnt_employees  INT; SELECT @cnt_employees  = COUNT(*) FROM dbo.Employees;
+DECLARE @cnt_bigcorp    INT; SELECT @cnt_bigcorp    = COUNT(*) FROM dbo.Orders WHERE CustomerID = 1;
+
+PRINT '? Seed data inserted.';
+PRINT '   Customers:      ' + CAST(@cnt_customers AS NVARCHAR);
+PRINT '   Products:       ' + CAST(@cnt_products  AS NVARCHAR);
+PRINT '   Orders:         ' + CAST(@cnt_orders    AS NVARCHAR);
+PRINT '   OrderItems:     ' + CAST(@cnt_items     AS NVARCHAR);
+PRINT '   Employees:      ' + CAST(@cnt_employees AS NVARCHAR);
+PRINT '   BigCorp orders: ' + CAST(@cnt_bigcorp   AS NVARCHAR);
 GO

@@ -8,7 +8,7 @@ Complete answers to the most likely questions. Read these out loud to practice.
 
 ### "How do you approach optimizing a slow stored procedure?"
 
-> "My first step is always measurement before assumption. I'll run the procedure in SSMS with `SET STATISTICS IO ON` and the actual execution plan enabled. The logical reads metric tells me where the I/O is happening — which table is doing the most work. Then I look at the execution plan itself.
+> "My first step is always measurement before assumption. I'll run the procedure with `SET STATISTICS IO ON` and the actual execution plan enabled — I use VS Code with the MSSQL extension or DataGrip on macOS. The logical reads metric tells me where the I/O is happening — which table is doing the most work. Then I look at the execution plan itself.
 >
 > The things I look for are: table scans on large tables (usually means a missing index or a non-SARGable predicate in the WHERE clause), key lookups (where SQL Server found the row via a nonclustered index but needed to go back for extra columns — I'd fix that by adding INCLUDE columns to make a covering index), and any large discrepancy between estimated and actual row counts (which points to either stale statistics or parameter sniffing).
 >

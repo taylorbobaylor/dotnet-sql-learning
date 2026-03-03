@@ -1,23 +1,27 @@
 services:
   sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    # SQL Server container images don't natively support macOS ARM64, so use
+    # the Azure SQL Edge image which is compatible with arm64 and provides a
+    # very similar SQL Server experience for development/testing.
+    image: mcr.microsoft.com/azure-sql-edge:latest
     container_name: sql-interview-demo
+    # Run as root so the container can create /.system and write to
+    # /var/opt/mssql on macOS Docker, where named volumes are owned by root
+    # and the default mssql user can't write to them.  Fine for local dev.
+    user: "0:0"
     environment:
-      SA_PASSWORD: "${SA_PASSWORD:-InterviewDemo@2024}"
+      SA_PASSWORD: "${SA_PASSWORD:-InterviewDemo@2026}"
       ACCEPT_EULA: "Y"
       MSSQL_PID: "Developer"
     ports:
-      # host port 1433 is often used by a local SQL Server instance and can
-      # conflict with the container.  map to an unused port on the host,
-      # for example 14330, and keep the container port at 1433.
-      - "14330:1433"
+      - "1433:1433"
     volumes:
       - sqlserver_data:/var/opt/mssql
       - ./init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa",
-             "-P", "${SA_PASSWORD:-InterviewDemo@2024}", "-Q", "SELECT 1",
-             "-C", "-b"]
+      # Use a TCP port check — avoids depending on sqlcmd binary location,
+      # which varies across azure-sql-edge versions.  Port 1433 open = engine up.
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/1433' 2>/dev/null && echo ok"]
       interval: 10s
       timeout: 10s
       retries: 10

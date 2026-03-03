@@ -45,7 +45,7 @@ These are almost certain to be asked given the job description:
 ### 1. "A stored procedure is running slow. Walk me through what you'd do."
 
 **Your answer framework:**
-1. Run it in SSMS with `SET STATISTICS IO ON` and the actual execution plan
+1. Run it with `SET STATISTICS IO ON` and the actual execution plan enabled (VS Code MSSQL: right-click → "Run Query with Actual Execution Plan"; DataGrip: Explain Plan → Explain Analyzed)
 2. Look at logical reads per table — which table is doing the most I/O?
 3. Check the execution plan for: Table Scans, Key Lookups, and row count estimate vs actual mismatches
 4. Table Scan → look for missing index or non-SARGable predicate

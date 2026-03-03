@@ -39,48 +39,53 @@ The **Key Lookup** is the "tax" you pay for having a narrow index. 10,000 Pendin
 
 ---
 
-## The SSMS Exercise
+## The Exercise
 
-**Step 1:** Enable statistics + actual plan:
+**Step 1:** Enable statistics and actual execution plan:
 
 ```sql
 SET STATISTICS IO ON;
 SET STATISTICS TIME ON;
--- Press Ctrl+M
 ```
 
-**Step 2:** Run the bad SP (using the narrow `IX_Orders_Status` index):
+Enable the actual plan **before** running:
+
+| Tool | How to enable actual execution plan |
+|---|---|
+| **VS Code MSSQL** | Right-click → **"Run Query with Actual Execution Plan"** |
+| **DataGrip** | Right-click → **Explain Plan → Explain Analyzed** |
+
+**Step 2:** Run the bad SP (narrow index, causes Key Lookups):
 
 ```sql
 EXEC dbo.usp_Bad_GetPendingOrders @Status = 'Pending';
 ```
 
-In the **Execution Plan** tab, look for:
+In the **Execution Plan tab**, look for two connected operators:
 ```
 Index Seek [IX_Orders_Status]  →  Key Lookup [dbo.Orders] (Clustered)
 ```
 
-The Key Lookup node will have a **high percentage cost** — often 60-80% of the total query.
+The Key Lookup node typically shows **60–80% of total query cost** — it dominates the plan. Hover/click the Key Lookup node to inspect its properties:
 
-Hover over the Key Lookup node. In the tooltip, look for:
 ```
 Output List: [Orders].CustomerID, [Orders].OrderDate, [Orders].TotalAmount
 ```
 
-These are the columns being fetched *after* the seek. That's what needs to be in INCLUDE.
+Those "Output List" columns are the ones the index doesn't have — they're being fetched one-by-one from the clustered index. Each of those fetches is a separate random I/O for every matching row.
 
-**Step 3:** Run the fixed SP (the covering index was created in script 06):
+**Step 3:** Run the fixed SP (covering index applied in script 06):
 
 ```sql
 EXEC dbo.usp_Fixed_GetPendingOrders @Status = 'Pending';
 ```
 
-The execution plan now shows:
+The execution plan now shows only:
 ```
-Index Seek [IX_Orders_Status_Covering]   ← No Key Lookup!
+Index Seek [IX_Orders_Status_Covering]
 ```
 
-SQL Server found everything it needed in the index itself.
+No Key Lookup operator. SQL Server satisfied the entire query from the covering index. The logical reads in Messages/Output will drop significantly.
 
 ---
 
