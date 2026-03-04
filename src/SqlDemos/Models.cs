@@ -22,7 +22,7 @@ public record Customer(
 
 public record Employee(
     int      EmployeeID,
-    string   Employee,
+    string   FullName,
     string   JobTitle,
     string   Department,
     decimal  Salary,

@@ -129,8 +129,8 @@ static async Task<List<BenchmarkResult>> Scenario1_CursorVsSetBased(string cs)
 
     return
     [
-        new(scenario: "1 - Cursor", sprocName: "usp_Bad_RecalcOrderTotals",   elapsedMs: badMs,  rowCount: badRows,  isBad: true),
-        new(scenario: "1 - Cursor", sprocName: "usp_Fixed_RecalcOrderTotals", elapsedMs: goodMs, rowCount: goodRows, isBad: false),
+        new(ScenarioName: "1 - Cursor", SprocName: "usp_Bad_RecalcOrderTotals",   ElapsedMs: badMs,  RowCount: badRows,  IsBad: true),
+        new(ScenarioName: "1 - Cursor", SprocName: "usp_Fixed_RecalcOrderTotals", ElapsedMs: goodMs, RowCount: goodRows, IsBad: false),
     ];
 }
 
@@ -296,7 +296,7 @@ static async Task<(long ElapsedMs, int RowCount)> TimeSproc(
 
 static void PrintScenarioHeader(int num, string name, string description)
 {
-    var rule = new Rule($"[bold steelblue1]Scenario {num}: {name}[/]").RuleStyle("grey");
+    var rule = new Spectre.Console.Rule($"[bold steelblue1]Scenario {num}: {name}[/]").RuleStyle("grey");
     AnsiConsole.Write(rule);
     AnsiConsole.MarkupLine($"[grey italic]{description}[/]\n");
 }

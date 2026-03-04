@@ -16,14 +16,8 @@ docker compose up -d
 
 Wait ~20 seconds for SQL Server to initialize, then run the init scripts.
 
-By default the helper will execute the first five files and leave the “fixed” stored
-procedures until after you've worked through the labs. Run with `--all` if you
-want everything applied in one shot.
-
 ```bash
-bash init-db.sh               # Linux/Mac
-# or `bash init-db.sh --all` to include the fixed procedures
-# Windows: run each docker/init/*.sql in SSMS in order
+bash init-db.sh
 ```
 
 **Step 2 — Verify it's working (VS Code MSSQL extension or DataGrip):**
