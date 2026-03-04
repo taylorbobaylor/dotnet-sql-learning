@@ -114,9 +114,9 @@ You can also query the plan cache directly:
 
 ```sql
 SELECT
-    qs.execution_count,
-    qs.total_logical_reads,
-    qs.total_elapsed_time / 1000 AS total_elapsed_ms,
+    ps.execution_count,
+    ps.total_logical_reads,
+    ps.total_elapsed_time / 1000 AS total_elapsed_ms,
     -- The value the plan was compiled for:
     TRY_CAST(qp.query_plan AS XML).value(
         '(//ParameterList/ColumnReference[@Column="@CustomerID"]/@ParameterCompiledValue)[1]',

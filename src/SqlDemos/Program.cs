@@ -96,7 +96,7 @@ if (results.Count > 0)
     foreach (var r in results)
     {
         var timeColor  = r.IsBad ? "red" : "green";
-        var verdict    = r.IsBad ? "[red]❌ Bad[/]" : "[green]✅ Fixed[/]";
+        var verdict    = r.IsBad ? "[red]✗ Bad[/]" : "[green]✓ Fixed[/]";
         table.AddRow(
             r.ScenarioName,
             $"[grey]{r.SprocName}[/]",
@@ -304,8 +304,8 @@ static void PrintScenarioHeader(int num, string name, string description)
 static void PrintComparison(string badLabel, long badMs, string goodLabel, long goodMs)
 {
     var speedup = badMs > 0 ? (double)badMs / Math.Max(goodMs, 1) : 0;
-    AnsiConsole.MarkupLine($"  [red]❌ {badLabel}:[/] [bold red]{badMs} ms[/]");
-    AnsiConsole.MarkupLine($"  [green]✅ {goodLabel}:[/] [bold green]{goodMs} ms[/]");
+    AnsiConsole.MarkupLine($"  [red]✗ {badLabel}:[/] [bold red]{badMs} ms[/]");
+    AnsiConsole.MarkupLine($"  [green]✓ {goodLabel}:[/] [bold green]{goodMs} ms[/]");
     if (speedup > 1)
-        AnsiConsole.MarkupLine($"  [yellow]⚡ {speedup:F1}× faster[/]\n");
+        AnsiConsole.MarkupLine($"  [yellow]>> {speedup:F1}x faster[/]\n");
 }
