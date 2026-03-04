@@ -2,6 +2,9 @@
 bin/
 obj/
 
+# MkDocs build output
+_site/
+
 # User-specific Visual Studio / Rider files
 *.user
 *.suo

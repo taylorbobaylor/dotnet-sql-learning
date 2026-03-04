@@ -1,6 +1,9 @@
 site_name: .NET & SQL Interview Prep
 site_description: Comprehensive study guide + hands-on lab for C#, .NET, and SQL Server interview preparation
 site_author: Taylor
+site_url: https://taylorbobaylor.github.io/dotnet-sql-learning/
+repo_url: https://github.com/taylorbobaylor/dotnet-sql-learning
+repo_name: taylorbobaylor/dotnet-sql-learning
 
 theme:
   name: material
