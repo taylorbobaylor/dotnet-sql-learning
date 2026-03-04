@@ -72,6 +72,10 @@ dotnet run -- 2         # scenario 2 only (parameter sniffing)
 
 ### 4. Browse the docs site
 
+The full docs are live at **[taylorbobaylor.github.io/dotnet-sql-learning](https://taylorbobaylor.github.io/dotnet-sql-learning/)** — no local setup needed.
+
+To run them locally instead:
+
 ```bash
 pip install mkdocs-material
 mkdocs serve
