@@ -4,6 +4,32 @@ A hands-on study lab for C# .NET + SQL Server interview prep. Includes a real Do
 
 ---
 
+## In Action
+
+**C# benchmark app — `dotnet run -- all`**
+
+> Scenario 1: Cursor loop vs set-based UPDATE
+
+![Scenario 1 — Cursor benchmark](docs/assets/screenshots/benchmark-scenario-1-cursor.png)
+
+> Scenario 2: Parameter sniffing — plan cached for the wrong customer shape
+
+![Scenario 2 — Parameter sniffing benchmark](docs/assets/screenshots/benchmark-scenario-2-param-sniff.png)
+
+> All 6 scenarios in one run
+
+![All scenarios benchmark summary](docs/assets/screenshots/benchmark-all-scenarios.png)
+
+**MkDocs docs site — `mkdocs serve`**
+
+![MkDocs documentation site](docs/assets/screenshots/mkdocs-site.png)
+
+**VS Code MSSQL — actual execution plan**
+
+![VS Code MSSQL execution plan](docs/assets/screenshots/vscode-execution-plan.png)
+
+---
+
 ## Quick Start
 
 ### 1. Spin up SQL Server

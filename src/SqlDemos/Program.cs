@@ -107,7 +107,7 @@ if (results.Count > 0)
     }
 
     AnsiConsole.Write(table);
-    AnsiConsole.MarkupLine("\n[grey]Tip: Run in SSMS with 'SET STATISTICS IO ON' to see logical reads.[/]");
+    AnsiConsole.MarkupLine("\n[grey]Tip: Run with SET STATISTICS IO ON in VS Code MSSQL or DataGrip to see logical reads.[/]");
 }
 
 // ============================================================

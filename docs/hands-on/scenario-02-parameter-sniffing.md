@@ -180,6 +180,14 @@ Is data distribution wildly variable (1 row vs 50,000)?
 
 ---
 
+## Benchmark Result
+
+Running `dotnet run -- 2` warms the cache with a small customer first, then hits BigCorp — you can see the cached bad plan vs the fixed plan:
+
+![Scenario 2 benchmark — parameter sniffing](../assets/screenshots/benchmark-scenario-2-param-sniff.png)
+
+---
+
 ## Interview Answer
 
 > "Parameter sniffing happens when SQL Server builds an execution plan for a stored procedure based on the first parameter values it sees, caches it, and then reuses it for all subsequent calls — even when those calls have parameters with totally different data characteristics. The classic sign is 'fast for most users, crawls for one big customer.' In the execution plan you'll see a huge mismatch between estimated and actual row counts. My fix depends on call frequency — for a low-frequency SP I'll add `OPTION(RECOMPILE)` to get a fresh plan every time. For a high-frequency call I'll use `OPTION(OPTIMIZE FOR UNKNOWN)` so we get a cached plan based on average statistics rather than an outlier value."

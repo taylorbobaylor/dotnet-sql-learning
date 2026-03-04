@@ -25,6 +25,8 @@ Always use the **actual execution plan** when diagnosing a slow query — the di
 
 After running, the graphical plan appears in the **Execution Plan** tab (VS Code) or **Plan** tab (DataGrip). Hover or click any operator node to see its full property sheet — estimated rows, actual rows, I/O cost, output column list.
 
+![VS Code MSSQL actual execution plan](../assets/screenshots/vscode-execution-plan.png)
+
 ---
 
 ## How to Read an Execution Plan

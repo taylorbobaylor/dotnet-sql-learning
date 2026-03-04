@@ -169,6 +169,14 @@ But always ask yourself first: *"Can I express this as a single UPDATE/INSERT/DE
 
 ---
 
+## Benchmark Result
+
+Running `dotnet run -- 1` shows the real-world timing difference on the seeded dataset (~55k orders):
+
+![Scenario 1 benchmark — cursor vs set-based](../assets/screenshots/benchmark-scenario-1-cursor.png)
+
+---
+
 ## Interview Answer
 
 > "I replaced the cursor with a set-based UPDATE using a subquery to aggregate line item totals grouped by OrderID. The key insight is that everything a cursor does one row at a time, SQL Server can usually do in one set-based operation — one log write instead of N, one join instead of N individual seeks, and parallel execution instead of serial. In this case it went from minutes to under a second."
