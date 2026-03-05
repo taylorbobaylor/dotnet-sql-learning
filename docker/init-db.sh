@@ -6,7 +6,7 @@
 #   brew install sqlcmd
 
 SA_PASSWORD="${SA_PASSWORD:-InterviewDemo@2026}"
-SERVER="localhost,1433"
+SERVER="localhost,31433"
 
 # Verify sqlcmd is available on the host
 if ! command -v sqlcmd &> /dev/null; then
