@@ -77,7 +77,12 @@ nav:
       - Entity Framework Core: dotnet/entity-framework.md
       - Dapper: dotnet/dapper.md
       - Calling Stored Procedures: dotnet/calling-stored-procedures.md
+      - Benchmark API (ASP.NET Core): dotnet/benchmark-api.md
   - Interview Prep:
       - Game Plan: interview-prep/index.md
       - Quick Reference Card: interview-prep/quick-reference.md
       - Top Q&A: interview-prep/common-questions.md
+
+  - Infrastructure & CI/CD:
+      - Kubernetes (Docker Desktop → AWS): infrastructure/kubernetes.md
+      - CI/CD Pipelines: infrastructure/cicd.md

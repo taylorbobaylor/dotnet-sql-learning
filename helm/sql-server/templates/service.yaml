@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sql-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "sql-server.labels" . | nindent 4 }}
+  # AWS DIFFERENCE: add NLB annotations when serviceType = LoadBalancer.
+  # Keep the load balancer internal — never expose SQL Server to the internet.
+  #
+  # annotations:
+  #   service.beta.kubernetes.io/aws-load-balancer-type:   nlb
+  #   service.beta.kubernetes.io/aws-load-balancer-scheme: internal
+spec:
+  selector:
+    {{- include "sql-server.selectorLabels" . | nindent 4 }}
+  # Docker Desktop: NodePort lets you connect from your Mac at localhost:<nodePort>.
+  # AWS DIFFERENCE: set sqlServer.serviceType = LoadBalancer in values / Terraform.
+  # For .NET apps running inside the same cluster, use ClusterIP and connect by DNS:
+  #   sql-server.<namespace>.svc.cluster.local:1433
+  type: {{ .Values.sqlServer.serviceType }}
+  ports:
+    - protocol: TCP
+      port: 1433
+      targetPort: 1433
+      {{- if eq .Values.sqlServer.serviceType "NodePort" }}
+      nodePort: {{ .Values.sqlServer.nodePort }}
+      {{- end }}

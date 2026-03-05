@@ -5,6 +5,14 @@ obj/
 # MkDocs build output
 _site/
 
+# Terraform
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+*.tfstate
+*.tfstate.backup
+*.tfstate.*.backup
+
 # User-specific Visual Studio / Rider files
 *.user
 *.suo
@@ -25,3 +33,7 @@ artifacts/
 
 # Docker volume data
 docker/data/
+
+# Helm
+helm/*/charts/
+helm/*/Chart.lock

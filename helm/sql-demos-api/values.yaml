@@ -1,0 +1,39 @@
+# Default values for sql-demos-api.
+# Terraform overrides these via `set` blocks in the helm_release resource.
+
+image:
+  # Build locally first: docker build -t sql-demos-api .
+  repository: sql-demos-api
+  tag: latest
+  # Docker Desktop: Never — use the locally-built image without pulling from a registry.
+  # AWS DIFFERENCE: change to Always and point at your ECR repo:
+  #   repository: <account>.dkr.ecr.<region>.amazonaws.com/sql-demos-api
+  pullPolicy: Never
+
+replicaCount: 1
+
+# Container port — ASP.NET Core .NET 8+ default is 8080 (not 80).
+containerPort: 8080
+
+service:
+  # Docker Desktop: NodePort exposes the API at localhost:<nodePort>.
+  # AWS DIFFERENCE: change to ClusterIP if accessed only by other pods in-cluster,
+  # or LoadBalancer / Ingress for external access.
+  type: NodePort
+  port: 80           # Service port (cluster-internal)
+  nodePort: 30080    # Host port on Docker Desktop (localhost:30080)
+
+# In-cluster ADO.NET connection string — points at the sql-server Service by DNS.
+# Format: Server=<release-name>.<namespace>.svc.cluster.local,1433;...
+# The sa password is left blank here and injected by Terraform from var.sa_password.
+# AWS DIFFERENCE: pull from AWS Secrets Manager via External Secrets Operator instead.
+connectionString: "Server=sql-server.sql-demo.svc.cluster.local,1433;Database=InterviewDemoDB;User Id=sa;Password=;TrustServerCertificate=True;"
+
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+  limits:
+    memory: "256Mi"
+    cpu: "500m"
+  # AWS DIFFERENCE: right-size based on your EKS node instance type and load profile.

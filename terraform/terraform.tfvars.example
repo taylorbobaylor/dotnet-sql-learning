@@ -1,0 +1,13 @@
+# Copy this file to terraform.tfvars and fill in your values.
+# terraform.tfvars is gitignored — never commit it.
+
+sa_password   = "InterviewDemo@2026"
+namespace     = "sql-demo"
+storage_size  = "5Gi"
+node_port     = 31433   # SQL Server NodePort  → localhost:31433
+api_node_port = 30080   # API NodePort         → localhost:30080
+                        # Scalar UI            → http://localhost:30080/scalar
+
+# AWS EKS — uncomment when targeting EKS:
+# eks_cluster_name = "my-eks-cluster"
+# aws_region       = "us-east-1"

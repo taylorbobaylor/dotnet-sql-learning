@@ -1,0 +1,12 @@
+apiVersion: v2
+name: sql-server
+description: SQL Server development chart for the .NET & SQL interview demo
+type: application
+version: 0.1.0
+appVersion: "2022"
+keywords:
+  - sql-server
+  - mssql
+  - database
+maintainers:
+  - name: Taylor

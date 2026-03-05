@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sql-demos-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "sql-demos-api.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "sql-demos-api.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "sql-demos-api.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: sql-demos-api
+          # Build locally: docker build -t sql-demos-api .
+          # AWS DIFFERENCE: push to ECR and update image.repository + pullPolicy: Always.
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.containerPort }}
+              protocol: TCP
+
+          env:
+            # Overrides appsettings.json with the in-cluster connection string.
+            # Double-underscore maps to the nested ConnectionStrings:InterviewDemo key.
+            - name: ConnectionStrings__InterviewDemo
+              valueFrom:
+                secretKeyRef:
+                  name: sql-demos-api-secret
+                  key: connection-string
+            # Ensure the app listens on the correct container port.
+            - name: ASPNETCORE_URLS
+              value: "http://+:{{ .Values.containerPort }}"
+
+          # Kubernetes probes hit the /health endpoint.
+          # livenessProbe:  "is the container alive?" — restart if it fails
+          # readinessProbe: "is the container ready to serve traffic?" — remove from LB if it fails
+          # Both start after 10s to allow the app to boot and connect to SQL Server.
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.containerPort }}
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.containerPort }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

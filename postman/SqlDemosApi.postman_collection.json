@@ -1,0 +1,189 @@
+{
+  "info": {
+    "name": "SqlDemos API",
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "description": ".NET 10 benchmark API for SQL Server antipattern demos.\n\nSet the `baseUrl` collection variable to match your environment:\n- Local dotnet run:    http://localhost:5000\n- Docker Desktop K8s:  http://localhost:30080\n- AWS EKS (NLB):       http://<nlb-dns-name>\n\nAll scenario endpoints run stored procedures against InterviewDemoDB and return timing results as JSON.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "description": "Change to http://localhost:30080 when using Kubernetes NodePort, or to your EKS endpoint."
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Liveness / readiness probe. Kubernetes polls this endpoint to decide if the pod should receive traffic."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"healthy\",\n  \"timestamp\": \"2026-03-05T12:00:00+00:00\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Scenarios",
+      "item": [
+        {
+          "name": "List All Scenarios",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/scenarios",
+              "host": ["{{baseUrl}}"],
+              "path": ["scenarios"]
+            },
+            "description": "Returns metadata for all 6 scenarios — no DB calls. Use this to see available scenario ids, antipatterns, and stored procedure names."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "[\n  {\n    \"id\": 1,\n    \"name\": \"Cursor Catastrophe\",\n    \"antipattern\": \"Row-by-row cursor loop UPDATE\",\n    \"fix\": \"Set-based UPDATE\",\n    \"badProcedure\": \"usp_Bad_RecalcOrderTotals\",\n    \"fixedProcedure\": \"usp_Fixed_RecalcOrderTotals\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Run All Scenarios",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/scenarios/all",
+              "host": ["{{baseUrl}}"],
+              "path": ["scenarios", "all"]
+            },
+            "description": "Runs all 6 bad-vs-fixed stored procedure pairs sequentially and returns timing results.\n\nNote: This runs real SQL workloads — expect 5–30 seconds depending on your hardware. Scenario 2 includes a cache-poisoning warmup call to demonstrate parameter sniffing realistically."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"totalElapsedMs\": 12500,\n  \"scenarios\": [\n    {\n      \"id\": 1,\n      \"name\": \"Cursor Catastrophe\",\n      \"antipattern\": \"Row-by-row cursor loop UPDATE\",\n      \"fix\": \"Set-based UPDATE\",\n      \"runs\": [\n        { \"procedure\": \"usp_Bad_RecalcOrderTotals\",   \"label\": \"Cursor (row-by-row)\",  \"elapsedMs\": 4200, \"rowCount\": 55000, \"isBad\": true  },\n        { \"procedure\": \"usp_Fixed_RecalcOrderTotals\", \"label\": \"Set-based UPDATE\",     \"elapsedMs\": 18,   \"rowCount\": 55000, \"isBad\": false }\n      ],\n      \"improvementFactor\": 233.3,\n      \"ranAt\": \"2026-03-05T12:00:00+00:00\"\n    }\n  ],\n  \"ranAt\": \"2026-03-05T12:00:00+00:00\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Scenario 1 — Cursor Catastrophe",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/scenarios/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["scenarios", "1"]
+            },
+            "description": "Cursor loop UPDATE vs set-based UPDATE.\n\nThe bad proc iterates every row individually (CURSOR FAST_FORWARD). The fixed proc does a single set-based UPDATE. Typically 100–500x improvement."
+          }
+        },
+        {
+          "name": "Scenario 2 — Parameter Sniffing Ghost",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/scenarios/2",
+              "host": ["{{baseUrl}}"],
+              "path": ["scenarios", "2"]
+            },
+            "description": "Parameter sniffing: plan compiled for a tiny customer (CustomerID=50) is reused for BigCorp (CustomerID=1, ~50k orders).\n\nReturns three runs:\n1. Bad proc with poisoned cache (CustomerID=1 after warmup with CustomerID=50)\n2. Fixed with OPTION(RECOMPILE) — recompiles per call\n3. Fixed with OPTIMIZE FOR UNKNOWN — stable plan, good for high-frequency procs"
+          }
+        },
+        {
+          "name": "Scenario 3 — Non-SARGable Date Trap",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/scenarios/3",
+              "host": ["{{baseUrl}}"],
+              "path": ["scenarios", "3"]
+            },
+            "description": "YEAR(OrderDate) = @Year vs range predicate.\n\nWrapping the indexed column in a function (YEAR(), MONTH()) prevents an index seek and forces a full scan. The fix rewrites to a range predicate: OrderDate >= @Start AND OrderDate < @End."
+          }
+        },
+        {
+          "name": "Scenario 4 — SELECT * Flood",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/scenarios/4",
+              "host": ["{{baseUrl}}"],
+              "path": ["scenarios", "4"]
+            },
+            "description": "SELECT * (drags in fat NVARCHAR MAX Notes column) vs explicit column list.\n\nSELECT * causes SQL Server to read the NVARCHAR MAX Notes column off-row for every matching row, ballooning I/O. The fix specifies only the columns the caller needs."
+          }
+        },
+        {
+          "name": "Scenario 5 — Key Lookup Tax",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/scenarios/5",
+              "host": ["{{baseUrl}}"],
+              "path": ["scenarios", "5"]
+            },
+            "description": "Narrow nonclustered index forces a clustered key lookup per row vs covering index.\n\nThe index on Status exists but doesn't include the other projected columns, so SQL Server does an extra clustered index lookup for every matching row. The fix adds a covering index with INCLUDE so all needed columns are in the leaf pages."
+          }
+        },
+        {
+          "name": "Scenario 6 — Scalar UDF Killer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/scenarios/6",
+              "host": ["{{baseUrl}}"],
+              "path": ["scenarios", "6"]
+            },
+            "description": "Scalar UDF in WHERE clause vs direct JOIN.\n\nA scalar UDF in WHERE is called row-by-row, prevents parallelism, and serialises the query plan. Replacing it with a direct JOIN on TierCode lets SQL Server use parallelism and eliminates the per-row function overhead."
+          }
+        },
+        {
+          "name": "Invalid Scenario (400 example)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/scenarios/99",
+              "host": ["{{baseUrl}}"],
+              "path": ["scenarios", "99"]
+            },
+            "description": "Demonstrates the 400 Bad Request response for an out-of-range scenario id."
+          },
+          "response": [
+            {
+              "name": "400 Bad Request",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"error\": \"Scenario id must be between 1 and 6. Got: 99.\",\n  \"valid\": [1, 2, 3, 4, 5, 6]\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

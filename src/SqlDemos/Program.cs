@@ -20,6 +20,10 @@ using SqlDemos;
 
 var config = new ConfigurationBuilder()
     .AddJsonFile("appsettings.json")
+    // Environment variables override appsettings.json — used when running in Kubernetes.
+    // Set ConnectionStrings__InterviewDemo to inject the in-cluster connection string.
+    // Double-underscore (__) is the nested key separator in .NET env var config.
+    .AddEnvironmentVariables()
     .Build();
 
 var connectionString = config.GetConnectionString("InterviewDemo")

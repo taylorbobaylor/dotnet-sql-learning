@@ -70,7 +70,40 @@ dotnet run -- all       # benchmark all 6 bad vs fixed proc pairs
 dotnet run -- 2         # scenario 2 only (parameter sniffing)
 ```
 
-### 4. Browse the docs site
+### 4. Run the benchmark API
+
+The `src/SqlDemosApi/` project is a **.NET 10 ASP.NET Core Minimal API** that exposes the same benchmarks as JSON endpoints. Open the Scalar UI to explore and run scenarios from your browser:
+
+```bash
+cd src/SqlDemosApi
+dotnet run
+# → http://localhost:5000/scalar   (Scalar OpenAPI UI)
+# → GET http://localhost:5000/scenarios/all
+# → GET http://localhost:5000/scenarios/1
+```
+
+Import `postman/SqlDemosApi.postman_collection.json` into Postman to get pre-built requests for every endpoint.
+
+### 5. Deploy to Kubernetes with Terraform + Helm (optional)
+
+One `terraform apply` deploys **both** the SQL Server and the API to Kubernetes — including building the Docker image automatically. Inline `# AWS DIFFERENCE:` comments show what changes for AWS EKS:
+
+```bash
+cd terraform
+cp terraform.tfvars.example terraform.tfvars  # set sa_password
+terraform init    # downloads kubernetes + helm + null providers
+terraform apply   # builds image → deploys sql-server → deploys sql-demos-api
+
+# Seed the database via NodePort 31433
+SERVER="localhost,31433" bash docker/init-db.sh
+
+# API is now live at:
+# http://localhost:30080/scalar
+```
+
+See the [Kubernetes + Terraform + Helm guide](https://taylorbobaylor.github.io/dotnet-sql-learning/infrastructure/kubernetes/) for the full walkthrough and AWS EKS differences, and [CI/CD Pipelines](https://taylorbobaylor.github.io/dotnet-sql-learning/infrastructure/cicd/) for the GitHub Actions workflows.
+
+### 6. Browse the docs site
 
 The full docs are live at **[taylorbobaylor.github.io/dotnet-sql-learning](https://taylorbobaylor.github.io/dotnet-sql-learning/)** — no local setup needed.
 
@@ -105,6 +138,7 @@ Open [http://localhost:8000](http://localhost:8000)
 - **C#:** Async/Await, SOLID Principles, Dependency Injection, Generics & LINQ
 - **.NET Data Access:** Entity Framework Core, Dapper, Calling Stored Procedures
 - **Interview Prep:** Game plan, Quick Reference Card, Top Q&A
+- **Infrastructure & CI/CD:** Kubernetes via Terraform + Helm (Docker Desktop → AWS EKS), GitHub Actions pipelines
 
 ---
 
@@ -112,6 +146,18 @@ Open [http://localhost:8000](http://localhost:8000)
 
 ```
 dotnet-sql-learning/
+├── terraform/
+│   ├── main.tf                  kubernetes + helm providers + helm_release resource
+│   ├── variables.tf             Input variables (namespace, password, storage, port)
+│   ├── outputs.tf               Connection string, sqlcmd helper, helm status
+│   └── terraform.tfvars.example Copy to terraform.tfvars — gitignored
+├── helm/
+│   ├── sql-server/              SQL Server chart (Secret, PVC, Deployment, Service)
+│   └── sql-demos-api/           API chart (Deployment + NodePort Service)
+│       └── templates/           deployment.yaml, service.yaml, secret.yaml
+├── Dockerfile                   Multi-stage build for sql-demos-api
+├── postman/
+│   └── SqlDemosApi.postman_collection.json  Import into Postman for instant testing
 ├── docker/
 │   ├── docker-compose.yml       SQL Server 2022 container
 │   ├── .env.example             SA password config
@@ -124,12 +170,14 @@ dotnet-sql-learning/
 │       ├── 05-bad-stored-procs.sql   ← The villains
 │       └── 06-fixed-stored-procs.sql ← The heroes
 ├── src/
-│   └── SqlDemos/                C# console app — benchmarks bad vs fixed
+│   ├── SqlDemos/                C# console app — interactive benchmarks (local dev)
+│   └── SqlDemosApi/             ASP.NET Core Minimal API — benchmarks as JSON endpoints
 ├── docs/
 │   ├── hands-on/                Scenario walkthroughs
 │   ├── sql/                     SQL Server reference
 │   ├── csharp/                  C# language topics
 │   ├── dotnet/                  EF Core, Dapper, stored procs
-│   └── interview-prep/          Game plan, Q&A, cheat sheet
+│   ├── interview-prep/          Game plan, Q&A, cheat sheet
+│   └── infrastructure/          Kubernetes (Terraform+Helm) + CI/CD pipelines
 └── mkdocs.yml
 ```

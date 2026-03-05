@@ -1,0 +1,12 @@
+apiVersion: v2
+name: sql-demos-api
+description: ASP.NET Core Minimal API that exposes the SQL benchmark scenarios as JSON endpoints
+type: application
+version: 0.1.0
+appVersion: "1.0"
+keywords:
+  - dotnet
+  - aspnetcore
+  - sql-server
+  - benchmark
+  - api

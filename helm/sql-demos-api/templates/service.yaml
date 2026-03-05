@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sql-demos-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "sql-demos-api.labels" . | nindent 4 }}
+  # AWS DIFFERENCE: add ALB/NLB annotations for external access via Ingress.
+  # For public internet access, use an ALB Ingress Controller rather than a
+  # direct LoadBalancer Service:
+  #
+  # annotations:
+  #   kubernetes.io/ingress.class: alb
+  #   alb.ingress.kubernetes.io/scheme: internet-facing
+  #   alb.ingress.kubernetes.io/target-type: ip
+spec:
+  selector:
+    {{- include "sql-demos-api.selectorLabels" . | nindent 4 }}
+  # Docker Desktop: NodePort exposes the API at localhost:30080.
+  # AWS DIFFERENCE: set service.type = ClusterIP and add an Ingress resource,
+  # or use LoadBalancer to get an NLB directly.
+  type: {{ .Values.service.type }}
+  ports:
+    - name: http
+      protocol: TCP
+      port: {{ .Values.service.port }}
+      targetPort: {{ .Values.containerPort }}
+      {{- if eq .Values.service.type "NodePort" }}
+      nodePort: {{ .Values.service.nodePort }}
+      {{- end }}
