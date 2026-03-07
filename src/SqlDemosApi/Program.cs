@@ -1,101 +1,127 @@
-using Scalar.AspNetCore;
-using SqlDemosApi;
+using System.Threading.RateLimiting;
 
-// ============================================================
-// SqlDemos API — .NET 10 Minimal API
-// ============================================================
-// Exposes the bad-vs-fixed stored procedure benchmarks as JSON
-// endpoints so they can be called from a browser, Postman, or
-// any HTTP client — including other services in Kubernetes.
-//
-// Local:      dotnet run → http://localhost:5000
-// Swagger UI: http://localhost:5000/scalar
-// Kubernetes: NodePort 30080 → container 8080
-// ============================================================
+using Microsoft.AspNetCore.RateLimiting;
+using Scalar.AspNetCore;
+
+using SqlDemos.Shared;
+using SqlDemosApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ── Connection string ───────────────────────────────────────────────────────
-// Reads from appsettings.json for local dev.
-// In Kubernetes, env var ConnectionStrings__InterviewDemo overrides it.
-// (Double underscore is .NET's nested key separator.)
-var connectionString = builder.Configuration.GetConnectionString("InterviewDemo")
-    ?? throw new InvalidOperationException(
-        "Connection string 'InterviewDemo' not found in appsettings.json " +
-        "or ConnectionStrings__InterviewDemo environment variable.");
+// ── Connection string ────────────────────────────────────────────────────────
+// Local dev: credentials are NOT committed to appsettings.json.
+// Set via dotnet user-secrets:  dotnet user-secrets set "ConnectionStrings:InterviewDemo" "Server=..."
+// Kubernetes: set the ConnectionStrings__InterviewDemo environment variable in the pod spec.
+var connectionString = builder.Configuration.GetConnectionString("InterviewDemo") is { Length: > 0 } cs
+    ? cs
+    : throw new InvalidOperationException(
+        "Connection string 'InterviewDemo' is missing or empty. " +
+        "Set it via dotnet user-secrets or the ConnectionStrings__InterviewDemo environment variable. " +
+        "See README.md for setup instructions.");
 
-// ── Services ────────────────────────────────────────────────────────────────
-builder.Services.AddSingleton(new BenchmarkService(connectionString));
+// ── Services ─────────────────────────────────────────────────────────────────
+builder.Services.AddSingleton<IDbConnectionFactory>(new SqlConnectionFactory(connectionString));
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<IBenchmarkService, BenchmarkService>();
 
-// OpenAPI spec at /openapi/v1.json — consumed by the Scalar UI
 builder.Services.AddOpenApi();
+
+// RFC 7807 problem-details for all unhandled exceptions.
+builder.Services.AddProblemDetails();
+
+// Rate-limit the benchmark endpoints — each run hits the database.
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("benchmark", limiterOptions =>
+    {
+        limiterOptions.PermitLimit = 5;
+        limiterOptions.Window = TimeSpan.FromMinutes(1);
+        limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        limiterOptions.QueueLimit = 0;
+    });
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
 
 var app = builder.Build();
 
-// ── Middleware ──────────────────────────────────────────────────────────────
-app.MapOpenApi();
+// ── Middleware ────────────────────────────────────────────────────────────────
+// UseExceptionHandler must come before routing so it wraps all endpoint exceptions.
+app.UseExceptionHandler();
+app.UseHttpsRedirection();
+app.UseRateLimiter();
 
-// Scalar UI — modern OpenAPI explorer (replaces Swashbuckle for .NET 9/10)
-// Browse to /scalar after starting the app.
+app.MapOpenApi();
 app.MapScalarApiReference(opts =>
 {
     opts.Title = ".NET SQL Demos API";
 });
 
-// ── Health ──────────────────────────────────────────────────────────────────
+// ── Health ───────────────────────────────────────────────────────────────────
 app.MapGet("/health", () => Results.Ok(new
 {
-    status    = "healthy",
+    status = "healthy",
     timestamp = DateTimeOffset.UtcNow,
 }))
 .WithName("HealthCheck")
 .WithTags("Health")
 .WithSummary("Liveness / readiness probe used by Kubernetes");
 
-// ── Scenarios — list ────────────────────────────────────────────────────────
-app.MapGet("/scenarios", () => Results.Ok(new[]
-{
-    new ScenarioInfo(1, "Cursor Catastrophe",      "Row-by-row cursor loop UPDATE",                         "Set-based UPDATE",                   "usp_Bad_RecalcOrderTotals",          "usp_Fixed_RecalcOrderTotals"),
-    new ScenarioInfo(2, "Parameter Sniffing Ghost", "Plan cached for wrong parameter shape",                 "OPTION(RECOMPILE) / OPTIMIZE FOR UNKNOWN", "usp_Bad_GetOrdersByCustomer",   "usp_Fixed_GetOrdersByCustomer"),
-    new ScenarioInfo(3, "Non-SARGable Date Trap",  "YEAR()/MONTH() on column prevents index seek",          "Range predicate (>= / <)",           "usp_Bad_GetOrdersByMonth",           "usp_Fixed_GetOrdersByMonth"),
-    new ScenarioInfo(4, "SELECT * Flood",           "SELECT * drags in fat NVARCHAR MAX Notes column",       "Explicit column list",               "usp_Bad_GetCustomerOrderHistory",    "usp_Fixed_GetCustomerOrderHistory"),
-    new ScenarioInfo(5, "Key Lookup Tax",           "Narrow index forces clustered key lookup per row",      "Covering index with INCLUDE",        "usp_Bad_GetPendingOrders",           "usp_Fixed_GetPendingOrders"),
-    new ScenarioInfo(6, "Scalar UDF Killer",        "Scalar UDF in WHERE forces row-by-row serial eval",    "Direct JOIN on TierCode",            "usp_Bad_GetGoldCustomerOrders",      "usp_Fixed_GetGoldCustomerOrders"),
-}))
+// ── Scenarios — list (static metadata, no DB) ────────────────────────────────
+// Derived from ScenarioCatalog so names and proc names stay in sync with what runs.
+// Pre-built once at startup; returned as-is on every request (no per-request allocation).
+var catalog = ScenarioCatalog.Build(DateTimeOffset.UtcNow.Year - 1);
+var scenarioListResult = Results.Ok(
+    catalog.Select(s => new ScenarioInfo(
+        s.Id,
+        s.Name,
+        s.Antipattern,
+        s.Fix,
+        s.Runs.First(r => r.IsBad && !r.IsWarmup).ProcName.Replace("dbo.", ""),
+        s.Runs.First(r => !r.IsBad && !r.IsWarmup).ProcName.Replace("dbo.", "")))
+    .ToArray());
+
+app.MapGet("/scenarios", () => scenarioListResult)
 .WithName("ListScenarios")
 .WithTags("Scenarios")
 .WithSummary("List all 6 benchmark scenarios (no DB calls — metadata only)");
 
-// ── Scenarios — run all ─────────────────────────────────────────────────────
-app.MapGet("/scenarios/all", async (BenchmarkService svc) =>
+// ── Scenarios — run all ───────────────────────────────────────────────────────
+app.MapGet("/scenarios/all", async (IBenchmarkService benchmarkService, CancellationToken cancellationToken) =>
 {
-    var result = await svc.RunAllAsync();
+    var result = await benchmarkService.RunAllAsync(cancellationToken);
     return Results.Ok(result);
 })
 .WithName("RunAllScenarios")
 .WithTags("Scenarios")
 .WithSummary("Run all 6 bad-vs-fixed stored procedure pairs and return timing results")
 .WithDescription(
-    "Executes all 6 scenario pairs sequentially. Each pair runs the 'bad' stored procedure " +
-    "then the 'fixed' version and returns elapsed milliseconds, row counts, and an improvement factor. " +
-    "Scenario 2 (parameter sniffing) includes a cache-poisoning warmup call to demonstrate the problem realistically.");
+    "Executes all 6 scenario pairs concurrently. Each pair runs the 'bad' stored procedure " +
+    "then the 'fixed' version(s) and returns elapsed milliseconds, row counts, and an improvement factor. " +
+    "Scenario 2 includes a cache-poisoning warmup call to demonstrate the problem realistically.")
+.RequireRateLimiting("benchmark");
 
-// ── Scenarios — run one ─────────────────────────────────────────────────────
-app.MapGet("/scenarios/{id:int}", async (int id, BenchmarkService svc) =>
+// ── Scenarios — run one ───────────────────────────────────────────────────────
+// Pre-allocated; avoids Enumerable.Range allocation on every bad-request response.
+var validScenarioIds = Enumerable.Range(1, ScenarioCatalog.Count).ToArray();
+
+app.MapGet("/scenarios/{id:int}", async (int id, IBenchmarkService benchmarkService, CancellationToken cancellationToken) =>
 {
-    if (id is < 1 or > 6)
+    if (id is < 1 or > ScenarioCatalog.Count)
+    {
         return Results.BadRequest(new
         {
-            error  = $"Scenario id must be between 1 and 6. Got: {id}.",
-            valid  = Enumerable.Range(1, 6),
+            error = $"Scenario id must be between 1 and {ScenarioCatalog.Count}. Got: {id}.",
+            valid = validScenarioIds,
         });
+    }
 
-    var result = await svc.RunScenarioAsync(id);
+    var result = await benchmarkService.RunScenarioAsync(id, cancellationToken);
     return Results.Ok(result);
 })
 .WithName("RunScenario")
 .WithTags("Scenarios")
-.WithSummary("Run a single bad-vs-fixed scenario pair (1–6)")
-.WithDescription("Valid ids: 1=Cursor, 2=ParameterSniffing, 3=NonSargable, 4=SelectStar, 5=KeyLookup, 6=ScalarUdf");
+.WithSummary($"Run a single bad-vs-fixed scenario pair (1–{ScenarioCatalog.Count})")
+.WithDescription("Valid ids: 1=Cursor, 2=ParameterSniffing, 3=NonSargable, 4=SelectStar, 5=KeyLookup, 6=ScalarUdf")
+.RequireRateLimiting("benchmark");
 
 app.Run();

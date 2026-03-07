@@ -16,6 +16,7 @@ WORKDIR /src
 # internal paths; skipping restore causes NETSDK1064 on publish even though
 # the restore step above succeeds. Letting publish restore is reliable.
 COPY src/SqlDemosApi/ src/SqlDemosApi/
+COPY src/SqlDemos.Shared/ src/SqlDemos.Shared/
 RUN dotnet publish src/SqlDemosApi/SqlDemosApi.csproj \
       -c Release \
       -o /app/out

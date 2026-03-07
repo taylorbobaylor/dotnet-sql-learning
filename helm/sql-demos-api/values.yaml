@@ -24,10 +24,18 @@ service:
   nodePort: 30080    # Host port on Docker Desktop (localhost:30080)
 
 # In-cluster ADO.NET connection string — points at the sql-server Service by DNS.
-# Format: Server=<release-name>.<namespace>.svc.cluster.local,1433;...
-# The sa password is left blank here and injected by Terraform from var.sa_password.
-# AWS DIFFERENCE: pull from AWS Secrets Manager via External Secrets Operator instead.
-connectionString: "Server=sql-server.sql-demo.svc.cluster.local,1433;Database=InterviewDemoDB;User Id=sa;Password=;TrustServerCertificate=True;"
+# Stored as base64 to avoid Helm `--set` parsing issues with commas/semicolons.
+# The default string (decoded) is:
+#   Server=sql-server.sql-demo.svc.cluster.local,1433;
+#   Database=InterviewDemoDB;
+#   User Id=sa;
+#   Password=;
+#   TrustServerCertificate=True;
+#   Encrypt=False;
+# TLS is disabled for the Docker Desktop demo (Encrypt=False) and the self-signed
+# certificate is trusted (TrustServerCertificate=True) to avoid handshake failures.
+# AWS DIFFERENCE: use proper certificates and enable encryption.
+connectionStringBase64: "U2VydmVyPXNxbC1zZXJ2ZXIuc3FsLWRlbW8uc3ZjLmNsdXN0ZXIubG9jYWwsMTQzMztEYXRhYmFzZT1JbnRlcnZpZXdEZW1vREI7VXNlciBJZD1zYTtQYXNzd29yZD07VHJ1c3RTZXJ2ZXJDZXJ0aWZpY2F0ZT1UcnVlO0VuY3J5cHQ9RmFsc2U7"
 
 resources:
   requests:

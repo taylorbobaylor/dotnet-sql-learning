@@ -218,9 +218,10 @@ resource "helm_release" "sql_demos_api" {
 
   # Build the connection string with the SA password injected at apply time.
   # The chart stores this in a Kubernetes Secret — never in plain ConfigMap.
-  set {
-    name  = "connectionString"
-    value = "Server=sql-server.${var.namespace}.svc.cluster.local,1433;Database=InterviewDemoDB;User Id=sa;Password=${var.sa_password};TrustServerCertificate=True;"
+  # Stored as base64 to avoid Helm parsing issues with commas/semicolons.
+  set_sensitive {
+    name  = "connectionStringBase64"
+    value = base64encode("Server=sql-server.${var.namespace}.svc.cluster.local,1433;Database=InterviewDemoDB;User Id=sa;Password=${var.sa_password};TrustServerCertificate=True;Encrypt=False;")
   }
 
   set {

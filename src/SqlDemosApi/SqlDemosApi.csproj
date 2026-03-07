@@ -9,20 +9,21 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dapper"                        Version="2.1.35" />
-    <PackageReference Include="Microsoft.Data.SqlClient"      Version="5.2.1"  />
+    <ProjectReference Include="..\SqlDemos.Shared\SqlDemos.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!--
       Microsoft.AspNetCore.OpenApi ships with the .NET SDK — version tracks the TFM.
       Generates /openapi/v1.json consumed by the Scalar UI below.
     -->
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi"  Version="10.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
     <!--
       Scalar: modern OpenAPI UI endorsed by the .NET team for .NET 9+.
       Replaces Swashbuckle (which has known .NET 9/10 compatibility issues).
       UI available at /scalar after startup.
-      Update to latest: dotnet add package Scalar.AspNetCore
     -->
-    <PackageReference Include="Scalar.AspNetCore"             Version="2.*"    />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.*" />
   </ItemGroup>
 
 </Project>

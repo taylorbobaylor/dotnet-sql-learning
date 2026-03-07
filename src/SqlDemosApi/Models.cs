@@ -6,41 +6,37 @@ namespace SqlDemosApi;
 public record ProcRun(
     string Procedure,
     string Label,
-    long   ElapsedMs,
-    int    RowCount,
-    bool   IsBad
-);
+    long ElapsedMs,
+    int RowCount,
+    bool IsBad);
 
 /// <summary>
 /// Full result for one benchmark scenario: bad proc vs fixed proc(s) with improvement stats.
 /// </summary>
 public record ScenarioResult(
-    int                     Id,
-    string                  Name,
-    string                  Antipattern,
-    string                  Fix,
-    IReadOnlyList<ProcRun>  Runs,
-    double                  ImprovementFactor,
-    DateTimeOffset          RanAt
-);
+    int Id,
+    string Name,
+    string Antipattern,
+    string Fix,
+    IReadOnlyList<ProcRun> Runs,
+    double ImprovementFactor,
+    DateTimeOffset RanAt);
 
 /// <summary>
 /// Aggregate result returned by GET /scenarios/all.
 /// </summary>
 public record AllScenariosResult(
-    long                        TotalElapsedMs,
+    long TotalElapsedMs,
     IReadOnlyList<ScenarioResult> Scenarios,
-    DateTimeOffset              RanAt
-);
+    DateTimeOffset RanAt);
 
 /// <summary>
 /// Lightweight description of a scenario returned by GET /scenarios (no benchmark data).
 /// </summary>
 public record ScenarioInfo(
-    int    Id,
+    int Id,
     string Name,
     string Antipattern,
     string Fix,
     string BadProcedure,
-    string FixedProcedure
-);
+    string FixedProcedure);

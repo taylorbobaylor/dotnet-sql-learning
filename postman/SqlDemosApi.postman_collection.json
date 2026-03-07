@@ -8,7 +8,7 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:5000",
+      "value": "http://localhost:30080",
       "description": "Change to http://localhost:30080 when using Kubernetes NodePort, or to your EKS endpoint."
     }
   ],
