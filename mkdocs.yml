@@ -85,4 +85,5 @@ nav:
 
   - Infrastructure & CI/CD:
       - Kubernetes (Docker Desktop → AWS): infrastructure/kubernetes.md
+      - Angular Dashboard: infrastructure/dashboard.md
       - CI/CD Pipelines: infrastructure/cicd.md

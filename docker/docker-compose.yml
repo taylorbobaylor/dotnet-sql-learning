@@ -28,6 +28,20 @@ services:
       start_period: 30s
     restart: unless-stopped
 
+  sql-init:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    user: "0:0"
+    environment:
+      SA_PASSWORD: "${SA_PASSWORD:-InterviewDemo@2026}"
+    volumes:
+      - ./init:/init:ro
+      - ./init-container.sh:/init-container.sh:ro
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "/init-container.sh"]
+    restart: "no"
+
   # Optional: SQL Server management tools via Adminer-style web UI
   # Uncomment if you want a browser-based query tool
   # adminer:

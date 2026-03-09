@@ -6,7 +6,16 @@
       "Bash(do echo:*)",
       "Bash(python3:*)",
       "Bash(do:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(kubectl get:*)",
+      "Bash(docker run:*)",
+      "Bash(kubectl logs:*)",
+      "Bash(kubectl exec:*)",
+      "Bash(curl:*)",
+      "Bash(helm upgrade:*)",
+      "Bash(kubectl rollout:*)",
+      "Bash(lsof:*)",
+      "Bash(chmod +x:*)"
     ]
   }
 }

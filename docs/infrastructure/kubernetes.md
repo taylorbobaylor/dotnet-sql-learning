@@ -1,10 +1,10 @@
 # Kubernetes with Terraform + Helm
 
-The `terraform/` directory deploys both SQL Server and the benchmark API to Kubernetes using three HashiCorp providers working together:
+The `terraform/` directory deploys SQL Server, the benchmark API, and the Angular dashboard to Kubernetes using three HashiCorp providers working together:
 
 - **[Terraform Kubernetes provider](https://registry.terraform.io/providers/hashicorp/kubernetes/latest)** — creates the namespace
-- **[Terraform Helm provider](https://registry.terraform.io/providers/hashicorp/helm/latest)** — deploys both Helm charts via `helm_release` resources
-- **[Terraform null provider](https://registry.terraform.io/providers/hashicorp/null/latest)** — runs `docker build` locally before the API chart deploys
+- **[Terraform Helm provider](https://registry.terraform.io/providers/hashicorp/helm/latest)** — deploys all three Helm charts via `helm_release` resources
+- **[Terraform null provider](https://registry.terraform.io/providers/hashicorp/null/latest)** — runs `docker build` locally before each app chart deploys
 
 The instructions below target **Docker Desktop** as the quickest local path, with inline `# AWS DIFFERENCE:` comments throughout the `.tf` and Helm files explaining what changes for **AWS EKS**.
 
@@ -20,6 +20,10 @@ terraform apply
     │       └─ local-exec: docker build -t sql-demos-api:latest .
     │          (only re-runs when Dockerfile or src/SqlDemosApi/ changes)
     │
+    ├─ null_resource "build_dashboard_image"
+    │       └─ local-exec: docker build -t sql-dashboard:latest sql-dashboard/
+    │          (only re-runs when sql-dashboard/Dockerfile or src/ changes)
+    │
     └─ helm provider
             ├─ helm_release "sql_server"
             │       ├─ chart: helm/sql-server/
@@ -27,13 +31,17 @@ terraform apply
             │       ├─ set: sqlServer.nodePort   → 31433
             │       └─ set: storage.size
             │
-            └─ helm_release "sql_demos_api"   (depends_on: sql_server + build_api_image)
-                    ├─ chart: helm/sql-demos-api/
-                    ├─ set: connectionString    (in-cluster DNS to sql-server)
-                    └─ set: service.nodePort    → 30080
+            ├─ helm_release "sql_demos_api"   (depends_on: sql_server + build_api_image)
+            │       ├─ chart: helm/sql-demos-api/
+            │       ├─ set: connectionString    (in-cluster DNS to sql-server)
+            │       └─ set: service.nodePort    → 30080
+            │
+            └─ helm_release "sql_dashboard"   (depends_on: sql_demos_api + build_dashboard_image)
+                    ├─ chart: helm/sql-dashboard/
+                    └─ set: service.nodePort    → 30081
 ```
 
-**Terraform is the single entry point.** One `terraform apply` builds the Docker image (if needed), creates the namespace, deploys both Helm charts, and wires up all Kubernetes resources — Secrets, PVC, Deployments, and Services. You never run `helm install` or `docker build` manually.
+**Terraform is the single entry point.** One `terraform apply` builds both Docker images (if needed), creates the namespace, deploys all three Helm charts, and wires up all Kubernetes resources — Secrets, PVC, Deployments, Services, and ConfigMaps. You never run `helm install` or `docker build` manually.
 
 ---
 
@@ -75,7 +83,7 @@ terraform plan
 terraform apply
 ```
 
-`terraform apply` does three things in order: builds the `sql-demos-api` Docker image (via `null_resource`), deploys the `sql-server` Helm chart (Secret, PVC, Deployment, Service), then deploys the `sql-demos-api` Helm chart once SQL Server is ready. SQL Server takes ~30 seconds to initialise after its pod starts.
+`terraform apply` does the following in order: builds both Docker images (via `null_resource`), deploys the `sql-server` Helm chart (Secret, PVC, Deployment, Service), deploys the `sql-demos-api` Helm chart once SQL Server is ready, then deploys the `sql-dashboard` Helm chart. SQL Server takes ~30 seconds to initialise after its pod starts.
 
 ---
 
@@ -110,6 +118,11 @@ Or hit it directly:
 ```bash
 curl http://localhost:30080/health
 curl http://localhost:30080/scenarios/1
+```
+
+**Dashboard** — open the Angular UI:
+```
+http://localhost:30081
 ```
 
 !!! note "Port difference vs Docker Compose"
@@ -165,9 +178,12 @@ kubectl get all -n sql-demo
 # Watch pods live (auto-refreshes)
 kubectl get pods -n sql-demo -w
 
-# Force Terraform to rebuild the image on the next apply
-# (deletes the null_resource from state so its triggers re-evaluate)
+# Force Terraform to rebuild the API image on the next apply
 terraform taint null_resource.build_api_image
+terraform apply
+
+# Force Terraform to rebuild the dashboard image on the next apply
+terraform taint null_resource.build_dashboard_image
 terraform apply
 ```
 
@@ -191,32 +207,42 @@ This removes the Helm release (and all chart resources) and the namespace. Terra
 
 ```
 terraform/
-├── main.tf                  # providers + null_resource (docker build) + helm_release resources
-├── variables.tf             # namespace, sa_password, storage_size, node_port, api_node_port
-├── outputs.tf               # api_url, api_scalar_ui, connection_string, helm status
+├── main.tf                  # providers + null_resources (docker builds) + helm_release resources
+├── variables.tf             # namespace, sa_password, storage_size, node_port, api_node_port, dashboard_node_port
+├── outputs.tf               # api_url, api_scalar_ui, dashboard_url, connection_string, helm status
 └── terraform.tfvars.example # copy to terraform.tfvars (gitignored)
 
 helm/
 ├── sql-server/
-│   ├── Chart.yaml               # chart name, version, appVersion
-│   ├── values.yaml              # default values (Terraform overrides via `set`)
+│   ├── Chart.yaml
+│   ├── values.yaml
 │   └── templates/
-│       ├── _helpers.tpl          # shared label helpers
+│       ├── _helpers.tpl
 │       ├── secret.yaml           # SA password Kubernetes Secret
 │       ├── pvc.yaml              # PersistentVolumeClaim for SQL data directory
 │       ├── deployment.yaml       # SQL Server Deployment (1 replica)
 │       └── service.yaml          # NodePort service (port 31433)
-└── sql-demos-api/
+├── sql-demos-api/
+│   ├── Chart.yaml
+│   ├── values.yaml
+│   └── templates/
+│       ├── _helpers.tpl
+│       ├── secret.yaml           # connection string Kubernetes Secret
+│       ├── deployment.yaml       # API Deployment with liveness/readiness probes on /health
+│       └── service.yaml          # NodePort service (port 30080)
+└── sql-dashboard/
     ├── Chart.yaml
-    ├── values.yaml              # image, containerPort, service.nodePort, connectionString
+    ├── values.yaml              # image, nodePort (30081), apiServiceHost
     └── templates/
         ├── _helpers.tpl
-        ├── secret.yaml           # connection string Kubernetes Secret
-        ├── deployment.yaml       # API Deployment with liveness/readiness probes on /health
-        └── service.yaml          # NodePort service (port 30080)
+        ├── configmap.yaml        # nginx config — proxies /health + /scenarios to API
+        ├── deployment.yaml       # nginx Deployment, mounts ConfigMap
+        └── service.yaml          # NodePort service (port 30081)
 
-Dockerfile                   # multi-stage build for sql-demos-api (built by null_resource)
+Dockerfile                   # multi-stage build for sql-demos-api
+sql-dashboard/Dockerfile     # multi-stage build for Angular SPA (node build → nginx runtime)
 src/SqlDemosApi/             # ASP.NET Core Minimal API source
+sql-dashboard/src/           # Angular 21 SPA source
 ```
 
 ---

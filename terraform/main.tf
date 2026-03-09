@@ -213,6 +213,36 @@ resource "helm_release" "sql_server" {
 
 
 # ---------------------------------------------------------------
+# SEED — run init SQL scripts against the deployed SQL Server
+#
+# Runs docker/init-db.sh on the local machine after SQL Server is up.
+# init-db.sh already polls until the server is ready, then runs all
+# docker/init/*.sql scripts in order via sqlcmd on localhost:31433.
+#
+# triggers: re-seeds automatically when any init script changes.
+# To force a re-seed without changing scripts: terraform taint null_resource.seed_database
+# ---------------------------------------------------------------
+resource "null_resource" "seed_database" {
+  depends_on = [helm_release.sql_server]
+
+  triggers = {
+    init_scripts = sha256(join(",", [
+      for f in sort(fileset("${path.module}/../docker/init", "*.sql")) :
+      "${f}=${filemd5("${path.module}/../docker/init/${f}")}"
+    ]))
+  }
+
+  provisioner "local-exec" {
+    command     = "bash docker/init-db.sh"
+    working_dir = "${path.module}/.."
+    environment = {
+      SA_PASSWORD = var.sa_password
+    }
+  }
+}
+
+
+# ---------------------------------------------------------------
 # HELM RELEASE — sql-demos-api (ASP.NET Core Minimal API)
 #
 # Deploys the benchmark API as a Kubernetes Deployment + Service.
@@ -237,7 +267,7 @@ resource "helm_release" "sql_demos_api" {
   # Wait for both: SQL Server to be deployed AND the image to be built.
   # Without null_resource.build_api_image here, Terraform might try to
   # deploy the API chart before the image exists, causing ErrImageNeverPull.
-  depends_on = [helm_release.sql_server, null_resource.build_api_image]
+  depends_on = [helm_release.sql_server, null_resource.build_api_image, null_resource.seed_database]
 
   # Build the connection string with the SA password injected at apply time.
   # The chart stores this in a Kubernetes Secret — never in plain ConfigMap.
