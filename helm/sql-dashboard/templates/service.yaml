@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sql-dashboard
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "sql-dashboard.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "sql-dashboard.selectorLabels" . | nindent 4 }}
+  # Docker Desktop: NodePort exposes the dashboard at localhost:30081.
+  # AWS DIFFERENCE: set service.type = ClusterIP and add an Ingress resource.
+  type: {{ .Values.service.type }}
+  ports:
+    - name: http
+      protocol: TCP
+      port: {{ .Values.service.port }}
+      targetPort: 80
+      {{- if eq .Values.service.type "NodePort" }}
+      nodePort: {{ .Values.service.nodePort }}
+      {{- end }}

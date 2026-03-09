@@ -107,6 +107,29 @@ provider "helm" {
 #
 # The Helm release then sets image.repository + image.tag to the ECR URI.
 # ---------------------------------------------------------------
+# ---------------------------------------------------------------
+# BUILD — Docker image for sql-dashboard (Angular SPA)
+# ---------------------------------------------------------------
+resource "null_resource" "build_dashboard_image" {
+  triggers = {
+    dockerfile = filemd5("${path.module}/../sql-dashboard/Dockerfile")
+
+    src_hash = sha256(join(",", [
+      for f in sort(fileset("${path.module}/../sql-dashboard/src", "**/*")) :
+      "${f}=${filemd5("${path.module}/../sql-dashboard/src/${f}")}"
+    ]))
+  }
+
+  provisioner "local-exec" {
+    command     = "docker build -t sql-dashboard:latest sql-dashboard/"
+    working_dir = "${path.module}/.."
+  }
+}
+
+
+# ---------------------------------------------------------------
+# BUILD — Docker image for sql-demos-api
+# ---------------------------------------------------------------
 resource "null_resource" "build_api_image" {
   triggers = {
     # Rebuild when Dockerfile changes
@@ -236,6 +259,49 @@ resource "helm_release" "sql_demos_api" {
   # set {
   #   name  = "image.repository"
   #   value = "<account>.dkr.ecr.<region>.amazonaws.com/sql-demos-api"
+  # }
+  # set {
+  #   name  = "image.pullPolicy"
+  #   value = "Always"
+  # }
+  #
+  # Switch to ClusterIP + Ingress (ALB) for internet-facing access:
+  #
+  # set {
+  #   name  = "service.type"
+  #   value = "ClusterIP"
+  # }
+  # ---------------------------------------------------------------
+}
+
+
+# ---------------------------------------------------------------
+# HELM RELEASE — sql-dashboard (Angular SPA)
+#
+# Serves the benchmark dashboard as a static SPA via nginx.
+# nginx proxies /health and /scenarios to the in-cluster API service
+# so the browser never makes cross-origin requests.
+# ---------------------------------------------------------------
+resource "helm_release" "sql_dashboard" {
+  name             = "sql-dashboard"
+  chart            = "${path.module}/../helm/sql-dashboard"
+  namespace        = var.namespace
+  create_namespace = false  # namespace already created by sql_server release
+
+  depends_on = [helm_release.sql_demos_api, null_resource.build_dashboard_image]
+
+  set {
+    name  = "service.nodePort"
+    value = tostring(var.dashboard_node_port)
+  }
+
+  # ---------------------------------------------------------------
+  # AWS DIFFERENCE:
+  # Push the image to ECR and override repository + pullPolicy:
+  #
+  # set {
+  #   name  = "image.repository"
+  #   value = "<account>.dkr.ecr.<region>.amazonaws.com/sql-dashboard"
   # }
   # set {
   #   name  = "image.pullPolicy"

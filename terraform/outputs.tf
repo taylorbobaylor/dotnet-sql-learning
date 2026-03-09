@@ -13,6 +13,16 @@ output "api_status" {
   value       = helm_release.sql_demos_api.status
 }
 
+output "dashboard_status" {
+  description = "sql-dashboard Helm release status"
+  value       = helm_release.sql_dashboard.status
+}
+
+output "dashboard_url" {
+  description = "SQL Performance Lab dashboard on Docker Desktop"
+  value       = "http://localhost:${var.dashboard_node_port}"
+}
+
 output "api_url" {
   description = "Base URL for the benchmark API on Docker Desktop"
   value       = "http://localhost:${var.api_node_port}"

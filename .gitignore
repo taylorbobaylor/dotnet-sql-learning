@@ -37,3 +37,7 @@ docker/data/
 # Helm
 helm/*/charts/
 helm/*/Chart.lock
+# Angular
+/sql-dashboard/node_modules/
+/sql-dashboard/dist/
+/sql-dashboard/.angular/

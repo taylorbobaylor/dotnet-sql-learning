@@ -1,0 +1,103 @@
+/* Global styles for SQL Performance Lab */
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  background-color: #f0f4f8;
+}
+
+/* ── Custom scrollbar ──────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f0f4f8;
+}
+::-webkit-scrollbar-thumb {
+  background: #b0bec5;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #78909c;
+}
+
+/* ── Utility classes ───────────────────────────────────────── */
+.text-bad {
+  color: #c62828;
+}
+.text-good {
+  color: #2e7d32;
+}
+.text-warning {
+  color: #f57c00;
+}
+.text-muted {
+  color: #78909c;
+}
+
+.badge-bad {
+  background-color: #ffebee;
+  color: #c62828;
+  border: 1px solid #ef9a9a;
+}
+.badge-good {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #a5d6a7;
+}
+
+/* ── Animation keyframes ──────────────────────────────────── */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-slide-down {
+  animation: slideDown 0.3s ease-out;
+}
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+.animate-pulse {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* ── Mat overrides ──────────────────────────────────────────── */
+.mat-mdc-card {
+  border-radius: 12px !important;
+}
+
+.mat-mdc-raised-button.run-all-btn {
+  height: 48px;
+  padding: 0 32px;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+}

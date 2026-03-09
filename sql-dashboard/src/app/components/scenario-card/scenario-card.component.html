@@ -1,0 +1,124 @@
+<mat-card class="scenario-card" [class.has-result]="result()">
+
+  <!-- ── Card header ──────────────────────────────────────────────── -->
+  <mat-card-header>
+    <div class="scenario-number" [style.background-color]="scenarioColor(scenario().id)">
+      <mat-icon>{{ scenarioIcon(scenario().id) }}</mat-icon>
+    </div>
+    <div class="header-text">
+      <mat-card-title>{{ scenario().name }}</mat-card-title>
+      <mat-card-subtitle>Scenario {{ scenario().id }}</mat-card-subtitle>
+    </div>
+
+    @if (result()) {
+      <div class="improvement-badge" [class.great]="improvement() >= 10" [class.good]="improvement() >= 2 && improvement() < 10">
+        <span class="improvement-value">{{ improvement() | number:'1.1-1' }}×</span>
+        <span class="improvement-label">faster</span>
+      </div>
+    }
+  </mat-card-header>
+
+  <mat-card-content>
+
+    <!-- ── Antipattern + fix pills ───────────────────────────────── -->
+    <div class="info-pills">
+      <div class="info-pill antipattern">
+        <mat-icon class="pill-icon">warning</mat-icon>
+        <div class="pill-text">
+          <span class="pill-label">Antipattern</span>
+          <span class="pill-desc">{{ scenario().antipattern }}</span>
+        </div>
+      </div>
+
+      <div class="info-pill fix">
+        <mat-icon class="pill-icon">check_circle</mat-icon>
+        <div class="pill-text">
+          <span class="pill-label">Fix</span>
+          <span class="pill-desc">{{ scenario().fix }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Proc name tags ────────────────────────────────────────── -->
+    <div class="proc-tags">
+      <span class="proc-tag bad" [matTooltip]="'Bad: ' + scenario().badProcedure">
+        <mat-icon>close</mat-icon> {{ scenario().badProcedure }}
+      </span>
+      <span class="proc-tag good" [matTooltip]="'Fixed: ' + scenario().fixedProcedure">
+        <mat-icon>check</mat-icon> {{ scenario().fixedProcedure }}
+      </span>
+    </div>
+
+    <!-- ── Results panel ─────────────────────────────────────────── -->
+    @if (result(); as res) {
+      <div class="results-panel animate-slide-down">
+        <mat-divider />
+        <div class="results-header">
+          <mat-icon class="results-icon">bar_chart</mat-icon>
+          <span>Benchmark Results</span>
+          <span class="ran-at">{{ res.ranAt | date:'HH:mm:ss' }}</span>
+        </div>
+
+        <!-- Timing bars -->
+        <div class="timing-bars">
+          @for (run of res.runs; track run.procedure) {
+            <div class="timing-row" [class.is-bad]="run.isBad" [class.is-good]="!run.isBad">
+              <div class="timing-label">
+                <mat-icon class="row-icon">{{ run.isBad ? 'cancel' : 'check_circle' }}</mat-icon>
+                <span class="run-label" [matTooltip]="run.procedure">{{ run.label }}</span>
+              </div>
+              <div class="bar-container">
+                <div class="bar" [style.width]="barWidth(run.elapsedMs)">
+                  <span class="bar-value">{{ formatMs(run.elapsedMs) }}</span>
+                </div>
+              </div>
+              <span class="row-count">{{ run.rowCount | number }} rows</span>
+            </div>
+          }
+        </div>
+
+        <!-- Summary line -->
+        <div class="speedup-summary">
+          <mat-icon>bolt</mat-icon>
+          @if (improvement() >= 1) {
+            Fixed is <strong>{{ improvement() | number:'1.1-1' }}× faster</strong> than bad
+          } @else {
+            Similar performance (&lt;1× difference)
+          }
+          &nbsp;·&nbsp;
+          <span class="text-muted">{{ (bestFixedRun()?.rowCount ?? 0) | number }} rows</span>
+        </div>
+      </div>
+    }
+
+    <!-- ── Error state ───────────────────────────────────────────── -->
+    @if (error()) {
+      <div class="error-panel animate-fade-in">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ error() }}</span>
+      </div>
+    }
+
+  </mat-card-content>
+
+  <mat-card-actions align="end">
+    @if (loading()) {
+      <div class="loading-row">
+        <mat-spinner diameter="20" />
+        <span class="loading-text">Running scenario…</span>
+      </div>
+    } @else {
+      <button
+        mat-stroked-button
+        color="primary"
+        (click)="run()"
+        [disabled]="loading()"
+        class="run-btn"
+      >
+        <mat-icon>play_arrow</mat-icon>
+        {{ result() ? 'Re-run' : 'Run Scenario' }}
+      </button>
+    }
+  </mat-card-actions>
+
+</mat-card>

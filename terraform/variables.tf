@@ -28,6 +28,12 @@ variable "api_node_port" {
   default     = 30080
 }
 
+variable "dashboard_node_port" {
+  description = "NodePort to expose the sql-dashboard on (Docker Desktop only) — browse to http://localhost:<dashboard_node_port>"
+  type        = number
+  default     = 30081
+}
+
 # ---------------------------------------------------------------
 # AWS DIFFERENCE:
 # Add these variables when targeting EKS:

@@ -1,0 +1,11 @@
+apiVersion: v2
+name: sql-dashboard
+description: Angular SPA dashboard for the SQL Performance Lab benchmark API
+type: application
+version: 0.1.0
+appVersion: "1.0"
+keywords:
+  - angular
+  - dashboard
+  - sql-server
+  - benchmark

@@ -1,0 +1,32 @@
+# Default values for sql-dashboard.
+
+image:
+  # Build locally first: docker build -t sql-dashboard sql-dashboard/
+  repository: sql-dashboard
+  tag: latest
+  # Docker Desktop: Never — use the locally-built image without pulling from a registry.
+  # AWS DIFFERENCE: change to Always and point at your ECR repo.
+  pullPolicy: Never
+
+replicaCount: 1
+
+service:
+  # Docker Desktop: NodePort exposes the dashboard at localhost:<nodePort>.
+  # AWS DIFFERENCE: change to ClusterIP and add an Ingress for external access.
+  type: NodePort
+  port: 80
+  nodePort: 30081    # Host port on Docker Desktop (localhost:30081)
+
+# In-cluster hostname of the benchmark API service.
+# nginx proxies /health and /scenarios to this host.
+# Docker Desktop: the API service is in the same namespace, reachable by its short name.
+# AWS DIFFERENCE: use the full FQDN or set to the Ingress/ALB hostname.
+apiServiceHost: sql-demos-api
+
+resources:
+  requests:
+    memory: "32Mi"
+    cpu: "50m"
+  limits:
+    memory: "64Mi"
+    cpu: "100m"
