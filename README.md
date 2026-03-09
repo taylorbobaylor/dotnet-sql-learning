@@ -1,5 +1,8 @@
 # .NET & SQL Interview Prep
 
+[![CI](https://github.com/taylorbobaylor/dotnet-sql-learning/actions/workflows/ci.yml/badge.svg)](https://github.com/taylorbobaylor/dotnet-sql-learning/actions/workflows/ci.yml)
+[![Docs](https://github.com/taylorbobaylor/dotnet-sql-learning/actions/workflows/deploy-docs.yml/badge.svg)](https://github.com/taylorbobaylor/dotnet-sql-learning/actions/workflows/deploy-docs.yml)
+
 A hands-on study lab for C# .NET + SQL Server interview prep. Includes a real Docker SQL Server, 6 intentionally broken stored procedures, and a C# console app to benchmark them.
 
 ---
