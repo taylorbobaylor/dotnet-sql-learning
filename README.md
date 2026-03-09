@@ -84,7 +84,15 @@ dotnet run
 
 Import `postman/SqlDemosApi.postman_collection.json` into Postman to get pre-built requests for every endpoint.
 
-### 5. Deploy to Kubernetes with Terraform + Helm (optional)
+### 5. Run the tests
+
+```bash
+dotnet test                # 42 unit + integration tests — no DB required
+```
+
+Tests use `WebApplicationFactory` with mocked services, so they run entirely in-memory. CI runs automatically on push/PR via GitHub Actions.
+
+### 6. Deploy to Kubernetes with Terraform + Helm (optional)
 
 One `terraform apply` deploys **both** the SQL Server and the API to Kubernetes — including building the Docker image automatically. Inline `# AWS DIFFERENCE:` comments show what changes for AWS EKS:
 
@@ -103,7 +111,7 @@ SERVER="localhost,31433" bash docker/init-db.sh
 
 See the [Kubernetes + Terraform + Helm guide](https://taylorbobaylor.github.io/dotnet-sql-learning/infrastructure/kubernetes/) for the full walkthrough and AWS EKS differences, and [CI/CD Pipelines](https://taylorbobaylor.github.io/dotnet-sql-learning/infrastructure/cicd/) for the GitHub Actions workflows.
 
-### 6. Browse the docs site
+### 7. Browse the docs site
 
 The full docs are live at **[taylorbobaylor.github.io/dotnet-sql-learning](https://taylorbobaylor.github.io/dotnet-sql-learning/)** — no local setup needed.
 
@@ -171,7 +179,12 @@ dotnet-sql-learning/
 │       └── 06-fixed-stored-procs.sql ← The heroes
 ├── src/
 │   ├── SqlDemos/                C# console app — interactive benchmarks (local dev)
-│   └── SqlDemosApi/             ASP.NET Core Minimal API — benchmarks as JSON endpoints
+│   ├── SqlDemos.Shared/         Shared library — ProcTimer, ScenarioCatalog, IDbConnectionFactory
+│   ├── SqlDemosApi/             ASP.NET Core Minimal API — benchmarks as JSON endpoints
+│   └── SqlDemosApi.Tests/       xUnit test project — unit + integration tests (no DB required)
+│       ├── Unit/                ScenarioCatalog, BenchmarkService, Model tests
+│       ├── Integration/         Endpoint tests via WebApplicationFactory
+│       └── Fixtures/            TestWebApplicationFactory (mocked DI)
 ├── docs/
 │   ├── hands-on/                Scenario walkthroughs
 │   ├── sql/                     SQL Server reference
