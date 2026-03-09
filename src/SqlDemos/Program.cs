@@ -134,7 +134,7 @@ try
 
             try
             {
-                var (ms, rowCount) = await ProcTimer.TimeProcAsync(
+                var (ms, rowCount) = await ProcTimer.TimeAsync(
                     connectionFactory, run.ProcName, run.Parameters, cancellationToken);
 
                 if (run.IsWarmup)

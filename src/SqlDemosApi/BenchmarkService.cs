@@ -13,6 +13,7 @@ namespace SqlDemosApi;
 /// </summary>
 public sealed class BenchmarkService(
     IDbConnectionFactory connectionFactory,
+    IProcTimer procTimer,
     TimeProvider timeProvider,
     ILogger<BenchmarkService> logger) : IBenchmarkService
 {
@@ -88,7 +89,7 @@ public sealed class BenchmarkService(
         {
             try
             {
-                var (ms, rowCount) = await ProcTimer.TimeProcAsync(
+                var (ms, rowCount) = await procTimer.TimeProcAsync(
                     connectionFactory, run.ProcName, run.Parameters, cancellationToken);
 
                 if (!run.IsWarmup)

@@ -21,6 +21,7 @@ var connectionString = builder.Configuration.GetConnectionString("InterviewDemo"
 
 // ── Services ─────────────────────────────────────────────────────────────────
 builder.Services.AddSingleton<IDbConnectionFactory>(new SqlConnectionFactory(connectionString));
+builder.Services.AddSingleton<IProcTimer, ProcTimer>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IBenchmarkService, BenchmarkService>();
 
@@ -125,3 +126,7 @@ app.MapGet("/scenarios/{id:int}", async (int id, IBenchmarkService benchmarkServ
 .RequireRateLimiting("benchmark");
 
 app.Run();
+
+// Enables WebApplicationFactory<Program> in integration tests.
+public partial class Program;
+

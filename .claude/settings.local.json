@@ -15,7 +15,11 @@
       "Bash(helm upgrade:*)",
       "Bash(kubectl rollout:*)",
       "Bash(lsof:*)",
-      "Bash(chmod +x:*)"
+      "Bash(chmod +x:*)",
+      "Bash(xargs ls:*)",
+      "Bash(dotnet sln:*)",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet test:*)"
     ]
   }
 }

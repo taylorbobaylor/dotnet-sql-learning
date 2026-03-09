@@ -41,3 +41,5 @@ helm/*/Chart.lock
 /sql-dashboard/node_modules/
 /sql-dashboard/dist/
 /sql-dashboard/.angular/
+/src/SqlDemosApi.Tests/TestResults
+/src/SqlDemosApi.Tests/coverage-report
