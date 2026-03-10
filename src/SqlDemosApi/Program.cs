@@ -129,7 +129,7 @@ var validScenarioIds = Enumerable.Range(1, ScenarioCatalog.Count).ToArray();
 
 app.MapGet("/scenarios/{id:int}", async (int id, IBenchmarkService benchmarkService, CancellationToken cancellationToken) =>
 {
-    if (id is < 1 or > ScenarioCatalog.Count)
+    if (id < 1 || id > ScenarioCatalog.Count)
     {
         return Results.BadRequest(new
         {

@@ -91,8 +91,8 @@ public sealed class BenchmarkService(
         {
             try
             {
-                var (ms, rowCount) = await procTimer.TimeProcAsync(
-                    connectionFactory, run.ProcName, run.Parameters, cancellationToken);
+                var (ms, rowCount) = await ExecuteWithDeadlockRetryAsync(
+                    run, scenario.Id, cancellationToken);
 
                 if (!run.IsWarmup)
                 {
@@ -116,6 +116,32 @@ public sealed class BenchmarkService(
         logger.LogInformation("Completed scenario {ScenarioId} ({ScenarioName})", scenario.Id, scenario.Name);
 
         return BuildScenarioResult(scenario, runs);
+    }
+
+    /// <summary>
+    /// Retries a proc execution on SQL Server deadlock (error 1205).
+    /// Deadlocks are expected when scenarios run concurrently against shared tables.
+    /// </summary>
+    private async Task<(long ElapsedMs, int RowCount)> ExecuteWithDeadlockRetryAsync(
+        ProcRunDefinition run, int scenarioId, CancellationToken cancellationToken, int maxRetries = 3)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                return await procTimer.TimeProcAsync(
+                    connectionFactory, run.ProcName, run.Parameters, cancellationToken);
+            }
+            catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 1205 && attempt < maxRetries)
+            {
+                logger.LogWarning(ex,
+                    "Scenario {ScenarioId} run '{ProcName}' hit deadlock (attempt {Attempt}/{MaxRetries}), retrying...",
+                    scenarioId, run.ProcName, attempt, maxRetries);
+
+                // Brief back-off before retrying to let the competing transaction finish.
+                await Task.Delay(attempt * 200, cancellationToken);
+            }
+        }
     }
 
     private ScenarioResult BuildScenarioResult(ScenarioDefinition scenario, IReadOnlyList<ProcRun> runs)
