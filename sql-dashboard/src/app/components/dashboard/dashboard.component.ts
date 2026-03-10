@@ -2,10 +2,12 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   inject,
   OnInit,
   signal,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -49,6 +51,7 @@ import { ScenarioCardComponent } from '../scenario-card/scenario-card.component'
 export class DashboardComponent implements OnInit {
   private readonly benchmarkService = inject(BenchmarkService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly destroyRef = inject(DestroyRef);
 
   /* ── Scenarios metadata ───────────────────────────────────────── */
   readonly scenarios = signal<ScenarioInfo[]>([]);
@@ -83,56 +86,62 @@ export class DashboardComponent implements OnInit {
   /* ── Load scenario metadata ───────────────────────────────────── */
   loadScenarios(): void {
     this.scenariosLoading.set(true);
-    this.benchmarkService.listScenarios().subscribe({
-      next: (list) => {
-        this.scenarios.set(list);
-        this.scenariosLoading.set(false);
-      },
-      error: () => {
-        this.scenariosLoading.set(false);
-        this.snackBar.open('Could not load scenarios — is the API running?', 'Dismiss', {
-          duration: 5000,
-          panelClass: 'error-snack',
-        });
-      },
-    });
+    this.benchmarkService.listScenarios()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (list) => {
+          this.scenarios.set(list);
+          this.scenariosLoading.set(false);
+        },
+        error: () => {
+          this.scenariosLoading.set(false);
+          this.snackBar.open('Could not load scenarios — is the API running?', 'Dismiss', {
+            duration: 5000,
+            panelClass: 'error-snack',
+          });
+        },
+      });
   }
 
   /* ── Health check ─────────────────────────────────────────────── */
   checkHealth(): void {
     this.healthStatus.set('checking');
-    this.benchmarkService.health().subscribe({
-      next: (h) => this.healthStatus.set(h.status === 'healthy' ? 'healthy' : 'unhealthy'),
-      error: () => this.healthStatus.set('unhealthy'),
-    });
+    this.benchmarkService.health()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (h) => this.healthStatus.set(h.status === 'healthy' ? 'healthy' : 'unhealthy'),
+        error: () => this.healthStatus.set('unhealthy'),
+      });
   }
 
   /* ── Run all scenarios ────────────────────────────────────────── */
   runAll(): void {
     this.runAllLoading.set(true);
     this.allResults.set(null);
-    this.benchmarkService.runAll().subscribe({
-      next: (result) => {
-        this.allResults.set(result);
-        // Push each result into the map so cards can display it
-        const map = new Map<number, ScenarioResult>();
-        result.scenarios.forEach((s) => map.set(s.id, s));
-        this.scenarioResults.set(map);
-        this.runAllLoading.set(false);
-        this.snackBar.open(
-          `All scenarios completed in ${(result.totalElapsedMs / 1000).toFixed(1)}s`,
-          '✓',
-          { duration: 4000 }
-        );
-      },
-      error: (err: Error) => {
-        this.runAllLoading.set(false);
-        this.snackBar.open(`Run All failed: ${err.message}`, 'Dismiss', {
-          duration: 6000,
-          panelClass: 'error-snack',
-        });
-      },
-    });
+    this.benchmarkService.runAll()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (result) => {
+          this.allResults.set(result);
+          // Push each result into the map so cards can display it
+          const map = new Map<number, ScenarioResult>();
+          result.scenarios.forEach((s) => map.set(s.id, s));
+          this.scenarioResults.set(map);
+          this.runAllLoading.set(false);
+          this.snackBar.open(
+            `All scenarios completed in ${(result.totalElapsedMs / 1000).toFixed(1)}s`,
+            '✓',
+            { duration: 4000 }
+          );
+        },
+        error: (err: Error) => {
+          this.runAllLoading.set(false);
+          this.snackBar.open(`Run All failed: ${err.message}`, 'Dismiss', {
+            duration: 6000,
+            panelClass: 'error-snack',
+          });
+        },
+      });
   }
 
   /* ── Helpers ──────────────────────────────────────────────────── */

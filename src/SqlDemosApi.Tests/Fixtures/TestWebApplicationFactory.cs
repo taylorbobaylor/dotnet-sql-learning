@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace SqlDemosApi.Tests.Fixtures;
 
@@ -21,19 +22,10 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
 
         builder.ConfigureServices(services =>
         {
-            // Remove real registrations that touch the database
-            var typesToRemove = new[]
-            {
-                typeof(IDbConnectionFactory),
-                typeof(IProcTimer),
-                typeof(IBenchmarkService),
-            };
-
-            foreach (var type in typesToRemove)
-            {
-                var descriptor = services.FirstOrDefault(d => d.ServiceType == type);
-                if (descriptor is not null) services.Remove(descriptor);
-            }
+            // Remove all real registrations that touch the database (RemoveAll handles duplicates)
+            services.RemoveAll<IDbConnectionFactory>();
+            services.RemoveAll<IProcTimer>();
+            services.RemoveAll<IBenchmarkService>();
 
             services.AddSingleton(Substitute.For<IDbConnectionFactory>());
             services.AddSingleton(Substitute.For<IProcTimer>());

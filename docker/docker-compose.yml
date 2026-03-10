@@ -10,7 +10,7 @@ services:
     # and the default mssql user can't write to them.  Fine for local dev.
     user: "0:0"
     environment:
-      SA_PASSWORD: "${SA_PASSWORD:-InterviewDemo@2026}"
+      SA_PASSWORD: "${SA_PASSWORD:?SA_PASSWORD must be set — copy docker/.env.example to docker/.env and fill it in}"
       ACCEPT_EULA: "Y"
       MSSQL_PID: "Developer"
     ports:
@@ -32,7 +32,7 @@ services:
     image: mcr.microsoft.com/azure-sql-edge:latest
     user: "0:0"
     environment:
-      SA_PASSWORD: "${SA_PASSWORD:-InterviewDemo@2026}"
+      SA_PASSWORD: "${SA_PASSWORD:?SA_PASSWORD must be set — copy docker/.env.example to docker/.env and fill it in}"
     volumes:
       - ./init:/init:ro
       - ./init-container.sh:/init-container.sh:ro

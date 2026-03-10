@@ -6,8 +6,11 @@ namespace SqlDemos.Shared;
 /// </summary>
 public static class ScenarioCatalog
 {
-    /// <summary>Total number of benchmark scenarios in the catalog.</summary>
-    public const int Count = 6;
+    /// <summary>
+    /// Total number of benchmark scenarios in the catalog.
+    /// Derived from the actual catalog array so it automatically stays in sync when scenarios are added or removed.
+    /// </summary>
+    public static readonly int Count = Build(DateTime.UtcNow.Year - 1).Length;
 
     /// <summary>
     /// Builds the full scenario catalog for the given year.
