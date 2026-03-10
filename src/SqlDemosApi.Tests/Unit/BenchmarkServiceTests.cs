@@ -24,6 +24,7 @@ public class BenchmarkServiceTests
             _connectionFactory,
             _procTimer,
             _timeProvider,
+            ScenarioCatalog.Build(_timeProvider.GetUtcNow().Year - 1),
             NullLogger<BenchmarkService>.Instance);
     }
 

@@ -19,16 +19,34 @@ var connectionString = builder.Configuration.GetConnectionString("InterviewDemo"
         "Set it via dotnet user-secrets or the ConnectionStrings__InterviewDemo environment variable. " +
         "See README.md for setup instructions.");
 
+// ── Scenario catalog ─────────────────────────────────────────────────────────
+// Built once at startup and shared across all consumers (list endpoint + BenchmarkService)
+// so definitions never diverge and Year - 1 is computed from a single consistent point in time.
+var catalog = ScenarioCatalog.Build(DateTimeOffset.UtcNow.Year - 1);
+
 // ── Services ─────────────────────────────────────────────────────────────────
 builder.Services.AddSingleton<IDbConnectionFactory>(new SqlConnectionFactory(connectionString));
 builder.Services.AddSingleton<IProcTimer, ProcTimer>();
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton(catalog); // shared ScenarioDefinition[] injected into BenchmarkService
 builder.Services.AddSingleton<IBenchmarkService, BenchmarkService>();
 
 builder.Services.AddOpenApi();
 
 // RFC 7807 problem-details for all unhandled exceptions.
 builder.Services.AddProblemDetails();
+
+// CORS — allows the Angular dashboard (default port 4200) to call the API.
+// For production/Kubernetes, override AllowedOrigins in appsettings.json or environment variables.
+var allowedOrigins = builder.Configuration
+    .GetSection("AllowedOrigins")
+    .Get<string[]>() ?? ["http://localhost:4200"];
+
+builder.Services.AddCors(options =>
+    options.AddPolicy("Dashboard", p => p
+        .WithOrigins(allowedOrigins)
+        .AllowAnyMethod()
+        .AllowAnyHeader()));
 
 // Rate-limit the benchmark endpoints — each run hits the database.
 builder.Services.AddRateLimiter(options =>
@@ -38,7 +56,7 @@ builder.Services.AddRateLimiter(options =>
         limiterOptions.PermitLimit = 5;
         limiterOptions.Window = TimeSpan.FromMinutes(1);
         limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        limiterOptions.QueueLimit = 0;
+        limiterOptions.QueueLimit = 0; // reject immediately when limit is hit; don't queue benchmark requests
     });
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
@@ -48,7 +66,12 @@ var app = builder.Build();
 // ── Middleware ────────────────────────────────────────────────────────────────
 // UseExceptionHandler must come before routing so it wraps all endpoint exceptions.
 app.UseExceptionHandler();
-app.UseHttpsRedirection();
+// Only redirect to HTTPS when running outside a container (the container only exposes HTTP on 8080).
+if (!app.Environment.IsProduction())
+{
+    app.UseHttpsRedirection();
+}
+app.UseCors("Dashboard");
 app.UseRateLimiter();
 
 app.MapOpenApi();
@@ -70,7 +93,6 @@ app.MapGet("/health", () => Results.Ok(new
 // ── Scenarios — list (static metadata, no DB) ────────────────────────────────
 // Derived from ScenarioCatalog so names and proc names stay in sync with what runs.
 // Pre-built once at startup; returned as-is on every request (no per-request allocation).
-var catalog = ScenarioCatalog.Build(DateTimeOffset.UtcNow.Year - 1);
 var scenarioListResult = Results.Ok(
     catalog.Select(s => new ScenarioInfo(
         s.Id,
@@ -107,7 +129,7 @@ var validScenarioIds = Enumerable.Range(1, ScenarioCatalog.Count).ToArray();
 
 app.MapGet("/scenarios/{id:int}", async (int id, IBenchmarkService benchmarkService, CancellationToken cancellationToken) =>
 {
-    if (id is < 1 or > ScenarioCatalog.Count)
+    if (id < 1 || id > ScenarioCatalog.Count)
     {
         return Results.BadRequest(new
         {

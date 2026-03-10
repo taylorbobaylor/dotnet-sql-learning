@@ -63,7 +63,7 @@ try
 
     if (choice == "all")
     {
-        for (int i = 1; i <= scenarios.Length; i++)
+        for (int i = 1; i <= ScenarioCatalog.Count; i++)
         {
             await RunScenarioAsync(i);
         }

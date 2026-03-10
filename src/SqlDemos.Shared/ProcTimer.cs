@@ -12,13 +12,16 @@ public sealed class ProcTimer : IProcTimer
 {
     public const int DefaultCommandTimeoutSeconds = 120;
 
+    // Reused across all static calls — ProcTimer has no mutable state so a shared instance is safe.
+    private static readonly ProcTimer _instance = new();
+
     /// <summary>Static convenience method for callers that don't use DI (e.g. console app).</summary>
     public static Task<(long ElapsedMs, int RowCount)> TimeAsync(
         IDbConnectionFactory connectionFactory,
         string procName,
         object? parameters = null,
         CancellationToken cancellationToken = default)
-        => new ProcTimer().TimeProcAsync(connectionFactory, procName, parameters, cancellationToken);
+        => _instance.TimeProcAsync(connectionFactory, procName, parameters, cancellationToken);
 
     public async Task<(long ElapsedMs, int RowCount)> TimeProcAsync(
         IDbConnectionFactory connectionFactory,

@@ -15,12 +15,12 @@ public sealed class BenchmarkService(
     IDbConnectionFactory connectionFactory,
     IProcTimer procTimer,
     TimeProvider timeProvider,
+    ScenarioDefinition[] scenarios,
     ILogger<BenchmarkService> logger) : IBenchmarkService
 {
-    // Year - 1 is computed once at construction time (app startup) from the injected TimeProvider.
-    // For a demo service this is precise enough; restart the service on New Year's Day.
-    private readonly ScenarioDefinition[] _scenarios =
-        ScenarioCatalog.Build(timeProvider.GetUtcNow().Year - 1);
+    // Catalog is injected as a singleton so it's built once at startup and shared with
+    // the list endpoint — both consumers always see the same definitions.
+    private readonly ScenarioDefinition[] _scenarios = scenarios;
 
     // ── Public API ───────────────────────────────────────────────────────────
 
@@ -83,18 +83,23 @@ public sealed class BenchmarkService(
         ScenarioDefinition scenario,
         CancellationToken cancellationToken)
     {
+        logger.LogInformation("Starting scenario {ScenarioId} ({ScenarioName})", scenario.Id, scenario.Name);
+
         var runs = new List<ProcRun>(scenario.Runs.Count);
 
         foreach (var run in scenario.Runs)
         {
             try
             {
-                var (ms, rowCount) = await procTimer.TimeProcAsync(
-                    connectionFactory, run.ProcName, run.Parameters, cancellationToken);
+                var (ms, rowCount) = await ExecuteWithDeadlockRetryAsync(
+                    run, scenario.Id, cancellationToken);
 
                 if (!run.IsWarmup)
                 {
                     runs.Add(new ProcRun(run.ProcName, run.Label, ms, rowCount, run.IsBad));
+                    logger.LogInformation(
+                        "Scenario {ScenarioId} run '{Label}' completed in {ElapsedMs}ms ({RowCount} rows)",
+                        scenario.Id, run.Label, ms, rowCount);
                 }
             }
             catch (Exception ex) when (run.IsWarmup && ex is not OperationCanceledException)
@@ -108,7 +113,35 @@ public sealed class BenchmarkService(
             // Non-warmup exceptions propagate to the global exception handler.
         }
 
+        logger.LogInformation("Completed scenario {ScenarioId} ({ScenarioName})", scenario.Id, scenario.Name);
+
         return BuildScenarioResult(scenario, runs);
+    }
+
+    /// <summary>
+    /// Retries a proc execution on SQL Server deadlock (error 1205).
+    /// Deadlocks are expected when scenarios run concurrently against shared tables.
+    /// </summary>
+    private async Task<(long ElapsedMs, int RowCount)> ExecuteWithDeadlockRetryAsync(
+        ProcRunDefinition run, int scenarioId, CancellationToken cancellationToken, int maxRetries = 3)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                return await procTimer.TimeProcAsync(
+                    connectionFactory, run.ProcName, run.Parameters, cancellationToken);
+            }
+            catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 1205 && attempt < maxRetries)
+            {
+                logger.LogWarning(ex,
+                    "Scenario {ScenarioId} run '{ProcName}' hit deadlock (attempt {Attempt}/{MaxRetries}), retrying...",
+                    scenarioId, run.ProcName, attempt, maxRetries);
+
+                // Brief back-off before retrying to let the competing transaction finish.
+                await Task.Delay(attempt * 200, cancellationToken);
+            }
+        }
     }
 
     private ScenarioResult BuildScenarioResult(ScenarioDefinition scenario, IReadOnlyList<ProcRun> runs)
